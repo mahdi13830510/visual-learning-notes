@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradient Descent — visual notes</title>
+<meta name="description" content="Two pages of visual lecture notes on gradient descent: loss landscape, gradient direction, the update rule, step-size limits and ill-conditioning. Made with the visual-learning-notes Claude skill.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+<link rel="stylesheet" href="notes.css">
+<script src="sketch.js"></script>
+</head>
+<body>
+<nav class="bar screen-only"><b>Gradient descent</b><a href="notes.pdf">PDF (A4)</a><a href="https://github.com/mahdi13830510/visual-learning-notes/blob/main/showcase/gradient-descent/blueprint.md">Handwriting blueprint</a><a href="../../">visual-learning-notes</a></nav>
+
+<!-- ================= PAGE 1 ================= -->
+<section class="page">
+  <header>
+    <h1 class="ul">Gradient Descent</h1>
+    <p class="problem"><b>Problem:</b> minimise $L(\theta)$, $\theta\in\mathbb{R}^n$. We can't see the landscape, only $L$ and $\nabla L$ <i>where we stand</i>.</p>
+    <span class="pno">1/2</span>
+  </header>
+
+  <div class="row" style="grid-template-columns: 1.35fr 1fr">
+    <div class="col">
+      <h2><span class="n">1</span>The picture: contours of $L$</h2>
+      <div class="fig" id="land"></div>
+      <p class="note center">$L(\theta)=\theta_1^2+3\theta_2^2$ &nbsp;· each ellipse = one value of $L$</p>
+      <p class="note"><span class="tag blue">Notice:</span> <span class="blue">$\nabla L$</span> is <b>⟂ to the contour</b> through $\theta_t$, and it does <b>not</b> point at the minimum.</p>
+    </div>
+
+    <div class="col">
+      <h2><span class="n">2</span>Why step along $-\nabla L$?</h2>
+      <div class="derive">
+        <div>$L(\theta+\Delta)\approx L(\theta)+\nabla L^{\top}\Delta$</div><div class="why">Taylor, small $\Delta$</div>
+        <div>$\nabla L^{\top}u=\lVert\nabla L\rVert\cos\varphi$</div><div class="why">slope along unit $u$</div>
+      </div>
+      <p class="note">$\varphi=0$ → steepest <b>ascent</b><br>$\varphi=90^\circ$ → slope 0 = along contour <span class="gray">(⇒ ⟂)</span></p>
+      <p>choose $\Delta=-\eta\nabla L$:</p>
+      <p>$\;\Rightarrow L(\theta+\Delta)\approx L(\theta)-\eta\lVert\nabla L\rVert^2$</p>
+      <p class="note green">→ goes down if $\nabla L\neq 0$ and $\eta$ small enough</p>
+
+      <div class="eq big box" data-color="blue">$$\theta_{t+1}=\theta_t\;\underbrace{-\;\eta}_{\text{how far}}\;\underbrace{\nabla L(\theta_t)}_{\text{uphill dir.}}$$</div>
+      <ul class="dash note">
+        <li><span class="blue">$\nabla L$</span>: direction + rate of fastest <b>increase</b></li>
+        <li><b>minus</b>: go downhill (green arrow)</li>
+        <li>$\eta$: how far we trust a <i>local</i> slope</li>
+        <li>stops when $\nabla L=0$ <span class="orange">(min, max <b>or saddle</b>)</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <hr class="rule">
+  <h2><span class="n">3</span>One step by hand</h2>
+  <div class="row r">
+    <div class="col">
+      <p>$\nabla L=(2\theta_1,\;6\theta_2)^{\top}$, &nbsp; $\theta_t=(2,1)$, &nbsp; $\eta=0.1$</p>
+      <p>$\nabla L(\theta_t)=(4,6)$</p>
+      <p>$\theta_{t+1}=(2,1)-0.1\,(4,6)=\color{#2c7a3f}{(1.6,\;0.4)}$</p>
+      <p>$L:\; 7 \;\to\; 3.04$ <span class="note green">✓ decreased</span></p>
+    </div>
+    <div class="col">
+      <p class="note"><span class="tag orange">Notice:</span> step dir. $(-4,-6)$ vs. straight to min $(-2,-1)$: the steep $\theta_2$-direction gets a <b>3× bigger push</b>.</p>
+      <p class="chain note">different curvatures <span class="to">→</span> unequal gradient components <span class="to">→</span> curved / zig-zag path <span class="gray">(p. 2)</span></p>
+    </div>
+  </div>
+
+  <hr class="rule">
+  <h2><span class="n">4</span>Where it stops: $\nabla L=0$ is not always a minimum</h2>
+  <div class="row" style="grid-template-columns: 200px 1fr">
+    <div class="fig" id="saddle"></div>
+    <div class="col">
+      <p>$L=\theta_1^2-\theta_2^2$: at the origin $\nabla L=0$, yet $\theta_2$-direction goes <b>down</b>.</p>
+      <ul class="dash note">
+        <li><span class="red">saddle</span>: GD started exactly on the $\theta_1$-axis never leaves it; tiny noise escapes</li>
+        <li><span class="red">local min</span> (non-convex $L$): GD stays; no global guarantee</li>
+        <li><span class="red">plateau</span>: $\nabla L\approx0$ far from any min → tiny steps</li>
+      </ul>
+      <p class="note orange"><b>Important assumption</b> for "GD finds <i>the</i> min": $L$ convex (+ suitable $\eta$, p. 2).</p>
+    </div>
+  </div>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> $-\nabla L$ is the fastest decrease <i>right here</i>. Gradient descent is greedy and local; it is <b>not</b> the shortest path to the minimum.
+  </div>
+</section>
+
+<!-- ================= PAGE 2 ================= -->
+<section class="page">
+  <header>
+    <h1 class="ul">Step size $\eta$ &amp; when GD struggles</h1>
+    <span class="pno">2/2</span>
+  </header>
+
+  <h2><span class="n">5</span>1-D: the whole story in one line</h2>
+  <div class="row l">
+    <div class="col">
+      <div class="derive">
+        <div>$L(\theta)=\tfrac{a}{2}\theta^2,\quad L'(\theta)=a\theta$</div><div class="why">curvature $a&gt;0$</div>
+        <div>$\theta_{t+1}=\theta_t-\eta a\theta_t=(1-\eta a)\,\theta_t$</div><div class="why">plug into update</div>
+        <div>$\theta_t=(1-\eta a)^t\,\theta_0$</div><div class="why">unroll</div>
+      </div>
+    </div>
+    <div class="col">
+      <p class="note">converges ⟺</p>
+      <div class="eq box" data-color="blue">$$|1-\eta a|\lt 1 \iff 0\lt\eta\lt \tfrac{2}{a}$$</div>
+      <ul class="dash note">
+        <li>$\eta a\lt1$: monotone, from one side</li>
+        <li>$\eta a=1$: lands on the min in <b>one step</b></li>
+        <li>$1\lt\eta a\lt2$: <span class="orange">overshoots, but oscillates inward</span></li>
+        <li>$\eta a\gt2$: <span class="red">overshoots more each step → diverges</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="row c3">
+    <div class="fig" id="small"></div>
+    <div class="fig" id="good"></div>
+    <div class="fig" id="big"></div>
+  </div>
+  <div class="row c3 note center" style="margin-top:-2mm">
+    <span>$\eta a=0.15$: <b>too small</b> → crawls</span>
+    <span class="green">$\eta a=0.7$: good → fast</span>
+    <span class="red">$\eta a=2.2$: <b>too large</b> → $|\theta|$ grows ×1.2 per step</span>
+  </div>
+
+  <hr class="rule">
+  <h2><span class="n">6</span>n-D: the tightest curvature limits $\eta$, the flattest sets the speed</h2>
+  <div class="row r">
+    <div class="col">
+      <div class="fig" id="zig"></div>
+      <p class="note center">$L=\tfrac12(\theta_1^2+10\,\theta_2^2)$, &nbsp;$\eta=0.18$</p>
+    </div>
+    <div class="col">
+      <p>$L=\tfrac12\theta^{\top}H\theta$, eigenvalues $\lambda_{\min}\le\dots\le\lambda_{\max}$:</p>
+      <p>each eigen-direction is the 1-D case with $a=\lambda_i$</p>
+      <ul class="dash">
+        <li>stability needs $\eta\lt 2/\lambda_{\max}$ <span class="note gray">(steep dir.)</span></li>
+        <li>slowest factor: $1-\eta\lambda_{\min}$ <span class="note gray">(flat dir.)</span></li>
+      </ul>
+      <p class="note"><span class="tag blue">So:</span> speed is set by $\kappa=\lambda_{\max}/\lambda_{\min}$. Big $\kappa$ → <b>zig-zag</b> across the valley, crawl along it.</p>
+      <p class="note orange"><b>Assumption</b> behind "$\eta\lt 2/L$" in general: $L$-smooth, i.e. curvature $\le L$ everywhere.</p>
+    </div>
+  </div>
+
+  <div class="row c2">
+    <div class="col">
+      <h2>Fixes for big $\kappa$ <span class="note gray">(beyond these notes)</span></h2>
+      <p class="note">momentum (damps the zig-zag), Adam / preconditioning (rescale directions so $\kappa\to$ smaller)</p>
+    </div>
+    <div class="col remember">
+      <h2 class="green">Remember</h2>
+      <ol class="note">
+        <li>$\nabla L$ ⟂ contours; $-\nabla L$ = steepest <i>local</i> descent.</li>
+        <li>1-D: $\theta_t=(1-\eta a)^t\theta_0$ → need $\eta\lt 2/a$.</li>
+        <li>Steepest curvature caps $\eta$, flattest sets the speed: $\kappa$ matters.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="quiz bottom">
+    <h2>Test your understanding</h2>
+    <ol>
+      <li>Why must the gradient be perpendicular to the contour line? Answer with the $\cos\varphi$ argument.</li>
+      <li>For $L=\tfrac{a}{2}\theta^2$, which $\eta$ reaches the minimum in one step? Why does that trick fail in n-D when $\lambda_{\max}\neq\lambda_{\min}$?</li>
+      <li>You double the scale of $\theta_2$ (units change). What happens to $\kappa$, the zig-zag, and the largest stable $\eta$?</li>
+      <li>GD stopped with $\nabla L=0$. Name three things this point could be, and say how you would tell them apart.</li>
+    </ol>
+  </div>
+</section>
+
+<script>
+Sketch.draw(() => {
+  // ---------- page 1: landscape ----------
+  const L = (x, y) => x * x + 3 * y * y;
+  const f = Sketch.fig("#land", { w: 380, h: 330, x: [-2.2, 3.1], y: [-1.5, 3.0], label: "contour plot with gradient and descent step" });
+  f.axes({ x: "\\theta_1", y: "\\theta_2" });
+  f.contours(L, [1, 3, 7, 12]);
+  f.point([0, 0], { color: "green", r: 3.5, label: "min", at: [-8, 14] });
+  const t = [2, 1];
+  // tangent to the contour at θt (direction ⟂ to ∇L = (4,6))
+  const u = [6 / Math.hypot(6, 4), -4 / Math.hypot(6, 4)];
+  f.line([t[0] - 0.75 * u[0], t[1] - 0.75 * u[1]], [t[0] + 0.75 * u[0], t[1] + 0.75 * u[1]], { color: "gray", dashed: true, rough: 0.3 });
+  f.text([t[0] - 0.78 * u[0], t[1] - 0.78 * u[1]], "tangent", { color: "gray", size: 15, anchor: "end", dx: -3, dy: -2 });
+  // straight line to minimum (not taken)
+  f.line(t, [0.15, 0.075], { color: "gray", dashed: [2, 4], rough: 0.2 });
+  f.text([0.75, 0.62], "straight to min", { color: "gray", size: 15, anchor: "end", dx: -6, dy: -4 });
+  // gradient and step
+  f.arrow(t, [t[0] + 0.2 * 4, t[1] + 0.2 * 6], { color: "blue", width: 1.8, label: "\\nabla L(\\theta_t)", tex: true, size: 15, labelOffset: [-36, 0] });
+  f.arrow(t, [1.6, 0.4], { color: "green", width: 1.8 });
+  f.tex([1.8, 0.7], "-\\eta\\nabla L", { color: "green", size: 15, anchor: "start", dx: 9, dy: 4 });
+  f.point(t, { label: "\\theta_t", tex: true, size: 15, at: [9, 0], base: "middle" });
+  f.tex([1.6, 0.4], "\\theta_{t+1}", { color: "green", size: 13, anchor: "start", dx: 6, dy: 10 });
+  f.point([1.6, 0.4], { color: "green", r: 2.5 });
+  // next iterates: θ ← (0.8θ1, 0.4θ2)
+  let p = [1.6, 0.4], pts = [p];
+  for (let i = 0; i < 5; i++) { p = [0.8 * p[0], 0.4 * p[1]]; pts.push(p); }
+  f.path(pts, { color: "green", dashed: [3, 4], rough: 0.3, smooth: false, width: 1 });
+  pts.slice(1).forEach((q) => f.point(q, { color: "green", r: 1.6 }));
+
+  // ---------- page 1: saddle ----------
+  const sd = Sketch.fig("#saddle", { w: 190, h: 165, x: [-2, 2], y: [-1.75, 1.75], pad: 8 });
+  sd.contours((x, y) => x * x - y * y, [-2, -0.8, 0.8, 2], { color: "gray" });
+  sd.line([-2, 0], [2, 0], { color: "faint", rough: 0.2, width: 0.8 });
+  sd.arrow([0, 0], [0, 1.3], { color: "red", width: 1.5, label: "down", labelOffset: [24, 6] });
+  sd.arrow([0, 0], [1.25, 0], { color: "gray", width: 1.2, head: 6, label: "up", labelOffset: [-6, -10] });
+  sd.point([0, 0], { r: 3.2, label: "\\nabla L=0", tex: true, size: 12, at: [-6, 14], anchor: "end", base: "top" });
+
+  // ---------- page 2: three step sizes on a parabola ----------
+  function panel(sel, etaA, th0, n, color, at = [5, -6]) {
+    const g = Sketch.fig(sel, { w: 210, h: 132, x: [-2.7, 2.7], y: [-0.25, 3.6], pad: 12 });
+    g.fn((x) => x * x / 2, -2.6, 2.6, { color: "gray", width: 1.2, rough: 0.4 });
+    g.line([-2.7, 0], [2.7, 0], { color: "faint", rough: 0.2, width: 0.8 });
+    g.point([0, 0], { color: "green", r: 2.5 });
+    let th = th0;
+    for (let i = 0; i < n; i++) {
+      const nx = (1 - etaA) * th;
+      if (Math.abs(nx) > 2.65) { g.arrow([th, th * th / 2], [Math.sign(nx) * 2.65, 3.5], { color, width: 1.3, head: 6, dashed: true }); break; }
+      g.arrow([th, th * th / 2], [nx, nx * nx / 2], { color, width: 1.3, head: 6 });
+      th = nx;
+    }
+    g.point([th0, th0 * th0 / 2], { r: 2.8, label: "\\theta_0", tex: true, size: 11, at, base: "bottom" });
+  }
+  panel("#small", 0.15, 2.4, 6, "orange");
+  panel("#good", 0.7, 2.4, 4, "green");
+  panel("#big", 2.2, 1.0, 4, "red", [10, 16]);
+
+  // ---------- page 2: zig-zag on an ill-conditioned bowl ----------
+  const z = Sketch.fig("#zig", { w: 300, h: 190, x: [-4.8, 1.2], y: [-1.85, 1.75], pad: 10 });
+  z.contours((x, y) => 0.5 * (x * x + 10 * y * y), [0.5, 2, 4.5, 8]);
+  z.point([0, 0], { color: "green", r: 3 });
+  let q = [-4.2, 1.1]; const path = [q];
+  for (let i = 0; i < 14; i++) { q = [(1 - 0.18) * q[0], (1 - 1.8) * q[1]]; path.push(q); }
+  z.path(path, { color: "red", smooth: false, width: 1.4, rough: 0.5 });
+  path.forEach((r) => z.point(r, { color: "red", r: 1.6 }));
+  z.text([-4.2, 1.1], "start", { size: 15, anchor: "end", dx: -5, dy: 4 });
+  z.text([-1.8, 1.45], "steep θ₂: flips sign, ×(−0.8)", { size: 15, color: "red", anchor: "middle" });
+  z.text([-1.8, -1.65], "flat θ₁: shrinks only ×0.82", { size: 15, color: "gray", anchor: "middle" });
+});
+</script>
+</body>
+</html>
