@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visual Learning Notes · a Claude skill for notes you can rebuild a concept from</title>
+<meta name="description" content="Visual Learning Notes turns lectures, slides, papers or a topic into compact visual study notes: one purpose per page, small meaningful diagrams, annotated equations, a handwriting blueprint, A4 PDFs and Excalidraw files.">
+<meta property="og:title" content="Visual Learning Notes: notes you can rebuild a concept from, weeks later">
+<meta property="og:description" content="A Claude skill that takes notes like the sharpest student in an excellent lecture: problem first, picture before equation, every line earns its place.">
+<meta property="og:image" content="https://mahdi13830510.github.io/visual-learning-notes/assets/banner.png">
+<meta property="og:url" content="https://mahdi13830510.github.io/visual-learning-notes/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://mahdi13830510.github.io/visual-learning-notes/assets/banner.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+  :root { --paper:#fffefa; --ink:#23262b; --soft:#4a4f57; --muted:#7a8089; --rule:#e3e5e8; --dot:#dfe2e6;
+          --blue:#1f5fae; --green:#2c7a3f; --red:#c0392b; --orange:#cc7414; }
+  * { box-sizing: border-box; }
+  body { margin:0; color:var(--ink); background-color:var(--paper);
+         background-image: radial-gradient(circle, var(--dot) 1px, transparent 1.3px); background-size: 22px 22px;
+         font: 17px/1.6 Inter, system-ui, sans-serif; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 16px; }
+  header img { display:block; width:100%; height:auto; border-bottom:1px solid var(--rule); }
+  .lede { font: 400 clamp(21px, 2.6vw, 27px)/1.4 Kalam, cursive; margin: 40px 0 6px; max-width: 34em; }
+  .sub { color: var(--soft); max-width: 44em; }
+  .cta { display:flex; flex-wrap:wrap; gap:12px; margin: 26px 0 50px; font-weight:600; }
+  .cta a { text-decoration:none; padding: 11px 17px; border-radius: 8px; }
+  .cta .primary { background: var(--ink); color: var(--paper); }
+  .cta .ghost { color: var(--ink); border: 1.5px solid var(--ink); background: var(--paper); }
+  h2 { font: 700 30px/1.15 Kalam, cursive; margin: 60px 0 14px; }
+  h2 small { font: 500 21px Caveat, cursive; color: var(--muted); margin-left: 8px; }
+  .cards { display:grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 26px; }
+  .card { background: var(--paper); }
+  .card img { width:100%; height:auto; display:block; border:1px solid var(--rule); box-shadow: 0 6px 20px rgba(0,0,0,.07); }
+  .card b { display:block; font: 700 21px Kalam, cursive; margin: 12px 0 2px; }
+  .card p { margin: 0 0 6px; color: var(--soft); font-size: 15.5px; }
+  .card .links { font-size: 15px; }
+  .card .links a { margin-right: 12px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px 30px; color: var(--soft); font-size: 16px; }
+  .grid b { display:block; color: var(--ink); font: 700 19px Kalam, cursive; margin-bottom: 2px; }
+  .deliver { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+  .deliver div { border-left: 2px solid var(--ink); padding-left: 14px; color: var(--soft); font-size: 16px; }
+  .deliver b { display:block; color: var(--ink); font: 700 19px Kalam, cursive; }
+  .note { font: 500 22px/1.3 Caveat, cursive; color: var(--blue); }
+  pre { font: 14.5px/1.55 "JetBrains Mono", ui-monospace, monospace; background: #fff; border:1px solid var(--rule);
+        padding: 14px 16px; border-radius: 6px; overflow-x:auto; }
+  code { font: 14.5px "JetBrains Mono", ui-monospace, monospace; }
+  .compare { display:grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  .compare div { background:#fff; border:1px solid var(--rule); padding: 14px 16px; font-size: 15.5px; color: var(--soft); }
+  .compare b { color: var(--ink); }
+  @media (max-width: 680px) { .compare { grid-template-columns: 1fr; } }
+  footer { margin: 70px 0 40px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--muted); }
+  a { color: var(--blue); }
+</style>
+</head>
+<body>
+<header><img src="assets/banner.png" alt="Visual Learning Notes: notes you can rebuild a concept from, weeks later" width="1280" height="640"></header>
+<main class="wrap">
+  <p class="lede"><b>Notes you can rebuild a concept from, weeks later.</b> Visual Learning Notes makes Claude take notes like the sharpest student in an excellent lecture: compact, visual, mathematically meaningful, and easy to copy by hand.</p>
+  <p class="sub">An open-source skill for Claude Code and Claude.ai. Give it lecture slides, a PDF, a paper, or just a topic.</p>
+  <div class="cta">
+    <a class="primary" href="showcase/gradient-descent/">Open the example notes</a>
+    <a class="ghost" href="https://github.com/mahdi13830510/visual-learning-notes">★ Star on GitHub</a>
+    <a class="ghost" href="https://github.com/mahdi13830510/visual-learning-notes/releases/latest">Download for Claude.ai</a>
+  </div>
+
+  <h2>Notes it made <small>open them, print them, copy them</small></h2>
+  <div class="cards">
+    <div class="card"><a href="showcase/gradient-descent/"><img src="assets/preview-gd.png" alt="Gradient descent notes, page 1" loading="lazy"></a>
+      <b>Gradient Descent</b><p>The contour picture, why −∇L, one step by hand, the 2/a step-size limit derived, and the κ zig-zag.</p>
+      <p class="links"><a href="showcase/gradient-descent/">notes</a><a href="showcase/gradient-descent/notes.pdf">PDF</a><a href="https://github.com/mahdi13830510/visual-learning-notes/blob/main/showcase/gradient-descent/blueprint.md">blueprint</a></p></div>
+    <div class="card"><a href="showcase/svd/"><img src="assets/preview-svd.png" alt="SVD notes, page 1" loading="lazy"></a>
+      <b>Singular Value Decomposition</b><p>A matrix as rotate, stretch, rotate: the circle-to-ellipse picture, what U, Σ and V do, and a 2×2 example you can check by hand.</p>
+      <p class="links"><a href="showcase/svd/">notes</a><a href="showcase/svd/notes.pdf">PDF</a><a href="https://github.com/mahdi13830510/visual-learning-notes/blob/main/showcase/svd/blueprint.md">blueprint</a></p></div>
+    <div class="card"><a href="showcase/fedavg/"><img src="assets/preview-fedavg.png" alt="Federated averaging notes, page 1" loading="lazy"></a>
+      <b>Federated Averaging</b><p>The server–client round, the n<sub>k</sub>/n-weighted update, and why non-IID clients drift, worked out with two clients.</p>
+      <p class="links"><a href="showcase/fedavg/">notes</a><a href="showcase/fedavg/notes.pdf">PDF</a><a href="https://github.com/mahdi13830510/visual-learning-notes/blob/main/showcase/fedavg/blueprint.md">blueprint</a></p></div>
+  </div>
+
+  <h2>What you get</h2>
+  <div class="deliver">
+    <div><b>A handwriting blueprint</b>Page by page, it gives the title, the layout, what to draw and how big, the equations, the annotations, what must not be left out, and how long it takes to copy. Then 3–5 understanding questions and a short Remember list.</div>
+    <div><b>Printable A4 pages</b>Ink on dotted paper, hand-drawn diagrams with real coordinates, and KaTeX math. Rendered to a vector PDF and checked for overflow, broken math, and overlapping labels.</div>
+    <div><b>Excalidraw diagrams</b>Native <code>.excalidraw</code> files for architectures, flows, and concept maps. Each one is verified with Excalidraw's own renderer, so it opens and stays editable.</div>
+  </div>
+
+  <h2>The rules it follows</h2>
+  <div class="grid">
+    <div><b>Every element earns its place</b>If removing something costs no understanding, it goes. If a drawing would make an idea much easier, it gets drawn.</div>
+    <div><b>Problem first</b>One line on what we're solving and why the obvious approach fails. No motivational essays.</div>
+    <div><b>Picture before equation</b>The drawing and the equation explain each other. The minus sign in the update rule <i>is</i> the green arrow.</div>
+    <div><b>Derivations kept</b>The intermediate steps that carry ideas, each with a short reason in the margin.</div>
+    <div><b>Relationships, not facts</b>Cause → effect chains, side-by-side comparisons, and before/after pictures, instead of five disconnected definitions.</div>
+    <div><b>Copyable by hand</b>1–3 diagrams and 3–8 equations per page, about 20 minutes to copy, and nothing a pen can't draw.</div>
+    <div><b>Colour means something</b>Blue for math objects, red for failure, green for what works, orange for assumptions. It survives grayscale.</div>
+    <div><b>Honest</b>Assumptions and failure modes stay on the page. In lecture mode, its own additions are marked <span class="note">+</span>, never put in the lecturer's mouth.</div>
+  </div>
+
+  <h2>Two modes, three densities</h2>
+  <div class="compare">
+    <div><b>Lecture companion.</b> Give it slides, a PDF chapter, screenshots, or a transcript. It keeps the lecturer's notation and order, compresses ten bullets into the one idea behind them, adds missing intuition (marked +), and flags errors in the source instead of silently fixing them.</div>
+    <div><b>Concept explorer.</b> Give it a topic, an equation, an algorithm, or a paper. It builds the concept's structure first (problem, mechanism, key insight, assumptions, failure modes), then designs the pages.</div>
+  </div>
+  <p class="sub" style="margin-top:14px"><b>Concept map</b> (the structure on one page) · <b>Learning notes</b> (the default: intuition, math, derivations, examples) · <b>Revision sheet</b> (only the essentials, before an exam).</p>
+
+  <h2>Install</h2>
+  <pre>/plugin marketplace add mahdi13830510/visual-learning-notes
+/plugin install visual-learning-notes@visual-learning-notes</pre>
+  <p class="sub">Or as a plain skill: <code>git clone https://github.com/mahdi13830510/visual-learning-notes ~/.claude/skills/visual-learning-notes</code></p>
+  <p class="sub">Then: <code>/visual-learning-notes make notes on the attention mechanism</code>, or attach your lecture slides and ask for notes. For Claude.ai, upload <a href="https://github.com/mahdi13830510/visual-learning-notes/releases/latest">visual-learning-notes.zip</a> under Settings → Capabilities → Skills.</p>
+
+  <footer>MIT licensed · <a href="https://github.com/mahdi13830510/visual-learning-notes">github.com/mahdi13830510/visual-learning-notes</a> · Notes fell short? <a href="https://github.com/mahdi13830510/visual-learning-notes/issues/new?template=notes-fell-short.md">Tell us</a>. · Sister skills: <a href="https://github.com/mahdi13830510/explain-like-a-professor">Explain Like a Professor</a> (full lessons) and <a href="https://github.com/mahdi13830510/intuition-engine">Intuition Engine</a> (Manim explainers).</footer>
+</main>
+</body>
+</html>
