@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Federated Averaging — visual notes</title>
+<meta name="description" content="Four pages of hand-drawn study notes on Federated Averaging (McMahan et al. 2017): the server–client round, local training, the weighted aggregation, why one local step is exactly gradient descent, and a checked numerical example of how non-IID data makes the averaged model drift away from the global optimum.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+<link rel="stylesheet" href="notes.css">
+<script src="sketch.js"></script>
+<style>
+  .algo { font-size: 14.5px; line-height: 1.38; }
+  .algo .who { font-weight: 700; }
+  .algo .l1 { padding-left: 4mm; } .algo .l2 { padding-left: 8mm; } .algo .l3 { padding-left: 12mm; }
+  .algo .katex { font-size: 1.02em; }
+  .src { font: 500 15px var(--note); color: var(--gray); margin-top: -1.5mm; }
+  .knobs td:first-child { white-space: nowrap; }
+  .num { font-size: 14.5px; }
+  .page > header .problem { order: 3; flex-basis: 100%; }
+  .page > header .pno { order: 2; }
+  .derive .katex-display, .derive .katex-display > .katex { text-align: left; }
+  .derive { row-gap: 1.6mm; }
+  table.cmp.full { width: 100%; }
+</style>
+</head>
+<body>
+<nav class="bar screen-only"><b>Federated averaging</b><a href="notes.pdf">PDF (A4)</a><a href="https://github.com/mahdi13830510/visual-learning-notes/blob/main/showcase/fedavg/blueprint.md">Handwriting blueprint</a><a href="fedavg-round.excalidraw">Excalidraw diagram</a><a href="../../">visual-learning-notes</a></nav>
+
+<!-- ============ PAGE 1 — the system and the protocol ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">FedAvg: one round</h1>
+    <p class="problem"><b>Problem:</b> train one model on data spread over $K$ devices. Data can't leave them, and every communication round is expensive.</p>
+    <span class="pno">1/4</span>
+  </header>
+  <p class="src">McMahan et al., AISTATS 2017 · gray refs = where in the paper · <span class="orange">+</span> = my explanation, not the paper's</p>
+
+  <div class="fig"><img src="fedavg-round.svg" alt="Server sends w_t to sampled clients; each trains locally and returns its model; the server averages them weighted by data size" style="width:100%"></div>
+
+  <div class="row l">
+    <div class="col">
+      <h2><span class="n">1</span>The algorithm <span class="srcref">Alg. 1</span></h2>
+      <div class="algo">
+        <div class="who">Server</div>
+        <div class="l1">initialise $w_0$; for each round $t = 0, 1, 2, \dots$</div>
+        <div class="l2">$m \leftarrow \max(C\cdot K,\,1)$; $\;S_t \leftarrow$ random set of $m$ clients</div>
+        <div class="l2">for $k \in S_t$ <i>in parallel</i>: $\;w^k_{t+1} \leftarrow \text{ClientUpdate}(k, w_t)$</div>
+        <div class="l2">$w_{t+1} \leftarrow \sum_{k \in S_t} \frac{n_k}{n_S}\, w^k_{t+1}, \quad n_S = \sum_{k\in S_t} n_k$</div>
+        <div class="who" style="margin-top:1.2mm">ClientUpdate$(k, w)$ <span class="gray" style="font-weight:400">— runs on device $k$</span></div>
+        <div class="l1">split local data $\mathcal P_k$ into batches of size $B$</div>
+        <div class="l1">for each local epoch $1 \dots E$: for each batch $b$:</div>
+        <div class="l3 blue">$w \leftarrow w - \eta\, \nabla \ell(w; b)$</div>
+        <div class="l1">return $w$ to the server</div>
+      </div>
+      <p class="note"><span class="orange">+</span> the paper's Alg. 1 writes the sum as $\sum_{k=1}^{K}\frac{n_k}{n}$; with a sample $S_t$, renormalise by $n_S$ so the weights sum to 1.</p>
+    </div>
+    <div class="col">
+      <h2><span class="n">2</span>Three knobs</h2>
+      <table class="cmp knobs">
+        <tr><td>$C$</td><td>fraction of clients per round</td></tr>
+        <tr><td>$E$</td><td>local epochs per round</td></tr>
+        <tr><td>$B$</td><td>local minibatch ($B=\infty$: whole $\mathcal P_k$)</td></tr>
+      </table>
+      <div class="eq">$$u_k = \frac{E\, n_k}{B} \;\;\text{local steps per round}$$</div>
+      <p class="note"><b>FedSGD</b> is the case $E=1,\ B=\infty$: one full-batch gradient per client per round. The baseline. <span class="srcref">§2</span></p>
+      <p class="note"><span class="tag">What travels?</span> $w_t$ down, $w^k_{t+1}$ up (and $n_k$). Never data.</p>
+      <p class="note"><span class="tag orange">Important assumption:</span> every client starts the round from the <i>same</i> $w_t$. Averaging nets trained from different inits fails <span class="srcref">Fig. 1</span></p>
+    </div>
+  </div>
+
+  <p class="chain">more local work ($E\uparrow$, $B\downarrow$) <span class="to">→</span> more progress per round <span class="to">→</span> fewer rounds <span class="gray">(paper: 10–100× fewer than FedSGD in its experiments)</span> <span class="to">→</span> <span class="bad">but on non-IID data, more local work = more drift (pp. 2–4)</span></p>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> trade cheap local computation for expensive communication: many local SGD steps, then one data-size-weighted average.
+  </div>
+</section>
+
+<!-- ============ PAGE 2 — the math ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">Why averaging models optimises $f$</h1>
+    <p class="problem"><b>Problem:</b> the server averages <i>weights</i>. When is that the same as descending the global loss?</p>
+    <span class="pno">2/4</span>
+  </header>
+
+  <div class="row r">
+    <div class="col">
+      <h2><span class="n">1</span>One local step, then average</h2>
+      <div class="fig" id="avgstep"></div>
+      <span class="cap note">2 clients, $n_1 : n_2 = 1 : 3$. The average sits ¾ of the way to $w^2$: the bigger client pulls harder.</span>
+      <p class="note num"><span class="tag">Numbers:</span> $n_1 = 100,\ n_2 = 300$, $w^1 = 2,\ w^2 = 6$ <br>$\Rightarrow w_{t+1} = \tfrac14\cdot 2 + \tfrac34\cdot 6 = 5$ <span class="red">(plain mean: 4)</span></p>
+    </div>
+    <div class="col">
+      <h2><span class="n">2</span>Objective → FedSGD = averaging</h2>
+      <div class="derive">
+        <div>$$f(w) = \tfrac1n \textstyle\sum_{i=1}^{n} f_i(w) = \sum_{k=1}^K \underbrace{\tfrac{n_k}{n}}_{p_k} F_k(w)$$</div>
+        <div class="why">group the $n$ examples by client</div>
+        <div>$$F_k(w) = \tfrac{1}{n_k}\textstyle\sum_{i\in\mathcal P_k} f_i(w)$$</div>
+        <div class="why">client $k$'s own average loss</div>
+        <div>$$\nabla f(w_t) = \textstyle\sum_k p_k\, \nabla F_k(w_t)$$</div>
+        <div class="why">$\nabla$ is linear</div>
+        <div>$$w_{t+1} = w_t - \eta \textstyle\sum_k p_k \nabla F_k(w_t)$$</div>
+        <div class="why">one GD step on $f$ (FedSGD)</div>
+        <div>$$\phantom{w_{t+1}} = \textstyle\sum_k p_k \big(w_t - \eta \nabla F_k(w_t)\big)$$</div>
+        <div class="why">uses $\sum_k p_k = 1$</div>
+        <div>$$\phantom{w_{t+1}} = \color{#2c7a3f}{\textstyle\sum_k p_k\, w^k_{t+1}}$$</div>
+        <div class="why green">= average of one-step local models. Exact.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row l">
+    <div class="col">
+      <h2><span class="n">3</span>FedAvg: $u_k$ local steps before averaging</h2>
+      <div class="eq">$$w^k_{t,s+1} = w^k_{t,s} - \eta\, g_k(w^k_{t,s}), \qquad w^k_{t,0} = w_t$$</div>
+      <div class="eq">$$w_{t+1} = w_t \;-\; \eta \sum_k p_k \underbrace{\sum_{s=0}^{u_k-1} g_k\big(\color{#c0392b}{w^k_{t,s}}\big)}_{\text{gradients along client } k\text{'s own path}}$$</div>
+      <p class="note">$g_k$: minibatch gradient of $F_k$. For $s \ge 1$ the point $\color{#c0392b}{w^k_{t,s}} \ne w_t$, and it moves toward <i>client k's</i> optimum.</p>
+      <p class="note red"><b>→ only the first local step is a GD step on $f$.</b> Small $\eta u_k$: ≈ $u_k$ steps on $f$; large: drift.</p>
+    </div>
+    <div class="col">
+      <h2><span class="n">4</span>Implementing it</h2>
+      <ul class="dash small">
+        <li>flatten all parameters into one vector $w$</li>
+        <li>or send updates $\Delta_k = w^k - w_t$: then $w_{t+1} = w_t + \sum_k p_k \Delta_k$</li>
+        <li>clients must report $n_k$; server never sees $\mathcal P_k$</li>
+        <li>local optimiser: plain SGD, same $\eta$ everywhere, restarted from $w_t$ each round</li>
+        <li>to test drift: split data by label (non-IID) vs shuffle (IID)</li>
+      </ul>
+      <p class="note red"><span class="tag">Common mistake:</span> uniform $\frac{1}{|S_t|}$ average minimises $\frac1K\sum_k F_k$: every <i>client</i> counts equally, not every example. Differs when $n_k$ are unequal.</p>
+    </div>
+  </div>
+
+  <div>
+    <h2><span class="n">5</span>Where the bias comes from: expand to 2nd order <span class="orange">+</span></h2>
+    <div class="derive">
+      <div>$$g_k(w^k_{t,s}) \approx \nabla F_k(w_t) + H_k\,(w^k_{t,s} - w_t), \qquad w^k_{t,s} - w_t \approx -\eta\, s\, \nabla F_k(w_t)$$</div>
+      <div class="why">Taylor, $H_k = \nabla^2 F_k(w_t)$; 1st-order path; full-batch</div>
+      <div>$$\sum_k p_k \Delta_k \approx \underbrace{-\eta u\, \nabla f(w_t)}_{u \text{ GD steps on } f} \;+\; \underbrace{\color{#c0392b}{\eta^2 \tfrac{u(u-1)}{2} \textstyle\sum_k p_k H_k \nabla F_k(w_t)}}_{\text{drift: each client's curvature} \times \text{its own gradient}}$$</div>
+      <div class="why">sum over $s = 0..u{-}1$, all $u_k = u$</div>
+    </div>
+    <p class="note">at $w^\star$: $\nabla f = 0$, but the red term $\ne 0$ unless all $H_k$ are equal or all $\nabla F_k(w^\star) = 0$ <b>→ FedAvg steps away from <span style="white-space:nowrap">$w^\star$.</span></b> Check p. 4, $u = 2$: $0.01\cdot(\tfrac12\cdot 1\cdot 3 + \tfrac12\cdot 3\cdot(-3)) = -0.03$, so $3 \to 2.97$ ✓</p>
+  </div>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> weights $p_k = n_k/n$ make the average exactly a GD step on $f$, but only for one local step. More steps evaluate gradients away from $w_t$.
+  </div>
+</section>
+
+<!-- ============ PAGE 3 — client distributions and drift ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">Client data and client drift</h1>
+    <p class="problem"><b>Problem:</b> we minimise $f = \sum_k p_k F_k$, but client $k$ only ever sees $F_k$. If $F_k \ne f$, its local steps head somewhere else.</p>
+    <span class="pno">3/4</span>
+  </header>
+
+  <div class="row c2">
+    <div class="col">
+      <h2><span class="n">1</span>IID split</h2>
+      <div class="fig" id="iid"></div>
+      <div class="eq">$$\mathbb E_{\mathcal P_k}\big[F_k(w)\big] = f(w)$$</div>
+      <p class="note">every client sees a shuffled sample → $F_k \approx f$ → both paths follow $f$; $w_{t+1}$ lands on the end of the gray path. <span class="srcref">§2</span></p>
+    </div>
+    <div class="col">
+      <h2><span class="n">2</span>Non-IID split</h2>
+      <div class="fig" id="noniid"></div>
+      <div class="eq">$$w^\star_k = \arg\min F_k \;\ne\; w^\star = \arg\min f$$</div>
+      <p class="note">each path bends toward its own $w^\star_k$. The average <span class="red">misses</span> where $u$ steps on $f$ would go.</p>
+    </div>
+  </div>
+  <p class="note gray" style="margin-top:-1.5mm">Same $f$ (gray rings), same $w_t$, $\eta = 0.1$, $u = 5$ local GD steps in both panels; only the split differs. Dashed gray = 5 GD steps on $f$ itself. <span class="orange">+</span> 2-D quadratic cartoon: real losses are non-convex, the mechanism is the same.</p>
+
+  <div class="row l">
+    <div class="col">
+      <h2><span class="n">3</span>Why drift happens <span class="orange">+</span></h2>
+      <p class="chain">non-IID <span class="to">→</span> $\nabla F_k(w) \ne \nabla f(w)$ <span class="to">→</span> $u_k$ steps follow $F_k$, curve toward $w_k^\star$ <span class="to">→</span> $\Delta_k$ biased <span class="to">→</span> <span class="bad">average lands off the path of $f$, even when started at $w^\star$ (p. 4)</span></p>
+      <div class="eq">$$\zeta^2(w) = \sum_k p_k \,\big\| \nabla F_k(w) - \nabla f(w) \big\|^2$$</div>
+      <p class="note">heterogeneity: how much clients disagree about the downhill direction. $\zeta = 0$ at every $w$ → no drift. Drift grows with $\zeta$ and with $\eta u_k$.</p>
+      <p class="note gray">"client drift" is the later name (Karimireddy et al. 2020, SCAFFOLD); the 2017 paper doesn't use it.</p>
+    </div>
+    <div class="col">
+      <h2><span class="n">4</span>Kinds of non-IID</h2>
+      <p class="note"><b>label skew</b>: client sees few classes. Paper's "pathological" MNIST: sort by digit, 200 shards of 300, 2 shards per client. <span class="srcref">§3</span></p>
+      <p class="note"><b>quantity skew</b>: unbalanced $n_k$ → weights $p_k$ matter.</p>
+      <p class="note"><span class="orange">+</span> <b>feature skew</b>: same labels, different inputs (handwriting, cameras).</p>
+      <p class="note"><span class="tag orange">Notice:</span> the paper reports FedAvg still trains well on its pathological split. Drift slows and biases it; it need not break it. Very large $E$ can plateau or diverge; the authors suggest decaying local work. <span class="srcref">§3</span></p>
+    </div>
+  </div>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> drift = each client descends its <i>own</i> $F_k$ for many steps; averaging the end points is not descending $f$.
+  </div>
+</section>
+
+<!-- ============ PAGE 4 — worked example + test ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">Worked example: the average misses $w^\star$</h1>
+    <p class="problem"><b>Problem:</b> two clients, different optima. Does FedAvg converge to the global optimum? <span class="orange">+</span></p>
+    <span class="pno">4/4</span>
+  </header>
+
+  <div class="row l">
+    <div class="col">
+      <div class="fig" id="oned"></div>
+      <span class="cap note">at $w^\star$: $F_1'(3) = +3$, $F_2'(3) = -3$. They cancel only <i>in the average</i>; each client alone still wants to move.</span>
+    </div>
+    <div class="col">
+      <h2><span class="n">1</span>Setup ($n_1 = n_2$, so $p_k = \frac12$)</h2>
+      <div class="eq">$$F_1 = \tfrac{1}{2}w^2, \quad F_2 = \tfrac{3}{2}(w-4)^2$$</div>
+      <p class="note">optima $c = (0, 4)$, curvatures $a = (1, 3)$</p>
+      <div class="eq">$$f'(w) = \tfrac12 w + \tfrac32(w-4) = 2w - 6$$</div>
+      <p class="note green"><b>$w^\star = 3$</b>, $f(3) = 3$. The steep client pulls $w^\star$ toward 4.</p>
+      <div class="eq">$$w^k = c_k + \rho_k^{\,u}\,(w_t - c_k), \quad \rho_k = 1 - \eta a_k$$</div>
+      <p class="note">each local GD step shrinks the gap to $c_k$ by $\rho_k$. $\;\eta = 0.1$: $\rho = (0.9,\ 0.7)$</p>
+    </div>
+  </div>
+
+  <div class="row c2">
+    <div class="col">
+      <h2><span class="n">2</span>One round, starting at $w_t = w^\star = 3$</h2>
+      <table class="cmp full">
+        <tr><th>$u$</th><th>$w^1 = 0.9^u\cdot 3$</th><th>$w^2 = 4 - 0.7^u$</th><th>$w_{t+1}$</th></tr>
+        <tr><td>1</td><td>2.7</td><td>3.3</td><td class="green">3.0 stays</td></tr>
+        <tr><td>2</td><td>2.43</td><td>3.51</td><td class="red">2.97 leaves</td></tr>
+        <tr><td>$\infty$</td><td>0</td><td>4</td><td class="red">2.0</td></tr>
+      </table>
+      <p class="note">$u \to \infty$: $f(2) = 4 \gt f(3)$, and $f'(2) = -2 \ne 0$: not even stationary.</p>
+    </div>
+    <div class="col">
+      <h2><span class="n">3</span>Where it settles (fixed point)</h2>
+      <div class="derive">
+        <div>$$\bar w = \textstyle\sum_k p_k\big[c_k + \rho_k^{u}(\bar w - c_k)\big]$$</div>
+        <div class="why">set $w_{t+1} = w_t$</div>
+        <div class="box" data-color="blue">$$\bar w = \frac{\sum_k p_k (1-\rho_k^{u})\, c_k}{\sum_k p_k (1-\rho_k^{u})}$$</div>
+        <div class="why">vs $w^\star = \frac{\sum p_k a_k c_k}{\sum p_k a_k}$</div>
+      </div>
+      <p class="note">$u = 1$: $1-\rho_k = \eta a_k$ → $\bar w = w^\star = 3$ <span class="green">✓</span></p>
+      <p class="note">$u = 2$: $\frac{0.51\cdot 4}{0.19 + 0.51} = 2.91$ · $u = 5$: 2.68 · $u = 10$: 2.39</p>
+      <p class="note">$u \to \infty$: $\bar w \to \sum_k p_k c_k = 2$ <span class="red">(curvature forgotten)</span></p>
+    </div>
+  </div>
+
+  <p class="chain"><span class="tag">What changes?</span> $E\uparrow$ or $B\downarrow$ <span class="to">→</span> $u\uparrow$ <span class="to">→</span> fewer rounds, but $\bar w$ slides from $w^\star$ toward $\sum_k p_k c_k$.<br>$\eta\downarrow$ <span class="to">→</span> drift term $\propto \eta^2$ shrinks faster than progress $\propto \eta$ <span class="to">→</span> less bias, slower.</p>
+  <p class="note"><span class="tag orange">Assumes</span> full-batch local GD, quadratic $F_k$, $\eta a_k \lt 2$. In this toy the bias needs <i>different curvatures</i>: with $a_1 = a_2$ it vanishes.</p>
+
+  <div class="row c2 bottom">
+    <div class="col quiz">
+      <h2><span class="n">?</span>Test your understanding</h2>
+      <ol class="small">
+        <li>With $E=1,\ B=\infty$, show FedAvg is one GD step on $f$. Which property of $p_k$ did you use?</li>
+        <li>Set $a_1 = a_2$ in the example. Where is $\bar w$ for every $u$, and why?</li>
+        <li>You average with $\frac{1}{|S_t|}$ instead of $\frac{n_k}{n_S}$. Which objective do you minimise? When is it $f$?</li>
+        <li>Why does raising $E$ save rounds on IID data but bias the result under label skew? Use $u \to \infty$.</li>
+      </ol>
+    </div>
+    <div class="col remember">
+      <h2><span class="n">!</span>Remember</h2>
+      <ol class="small">
+        <li>FedAvg: sampled clients run $E$ epochs of SGD from $w_t$; the server takes the $n_k$-weighted average.</li>
+        <li>One local step + averaging is exactly GD on $f$; more local steps buy fewer rounds with bias.</li>
+        <li>Non-IID data → clients descend different $F_k$ → the average drifts off $w^\star$, more with larger $\eta u$ and heterogeneity.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<script>
+Sketch.draw(() => {
+  // ---------- page 2: one step + weighted average (n1 : n2 = 1 : 3) ----------
+  {
+    const f = Sketch.fig("#avgstep", { w: 330, h: 280, x: [-2.0, 2.4], y: [-0.4, 2.45] });
+    const wt = [0, 0], w1 = [-1.4, 1.8], w2 = [1.8, 1.0];
+    const avg = [0.25 * w1[0] + 0.75 * w2[0], 0.25 * w1[1] + 0.75 * w2[1]];   // (1.0, 1.2)
+    f.line(w1, w2, { color: "gray", dashed: true });
+    f.arrow(wt, w1, { color: "blue", label: "-\\eta\\nabla F_1", tex: true, labelAt: "mid", labelOffset: [-34, 4], size: 14 });
+    f.arrow(wt, w2, { color: "blue", label: "-\\eta\\nabla F_2", tex: true, labelAt: "mid", labelOffset: [40, 10], size: 14 });
+    f.arrow(wt, avg, { color: "green", width: 1.9, label: "-\\eta\\nabla f", tex: true, labelAt: "mid", labelOffset: [-26, -4], size: 14 });
+    f.point(wt, { label: "w_t", tex: true, at: [8, 8], size: 15 });
+    f.point(w1, { color: "blue", label: "w^1", tex: true, at: [-8, -6], size: 15 });
+    f.point(w2, { color: "blue", label: "w^2", tex: true, at: [8, -6], size: 15 });
+    f.point(avg, { color: "green", r: 3.8, label: "w_{t+1}", tex: true, at: [9, 15], size: 15 });
+    f.brace(w1, avg, { label: "\\propto n_2", tex: true, size: 13, color: "gray", depth: 6 });
+    f.brace(avg, w2, { label: "\\propto n_1", tex: true, size: 13, color: "gray", depth: 6 });
+  }
+
+  // ---------- page 3: IID vs non-IID, real GD paths ----------
+  const ws = [1.2, 0.6], start = [0.8, -1.4], eta = 0.1, U = 5;
+  const gd = (A, c, w0, n) => { const pts = [w0.slice()]; let w = w0.slice();
+    for (let s = 0; s < n; s++) { w = [w[0] - eta * A[0] * (w[0] - c[0]), w[1] - eta * A[1] * (w[1] - c[1])]; pts.push(w); } return pts; };
+  const fglob = (x, y) => 1.25 * ((x - ws[0]) ** 2 + (y - ws[1]) ** 2);     // f has Hessian 2.5·I, min w*
+  function panel(sel, clients, o) {
+    const g = Sketch.fig(sel, { w: 340, h: 266, x: [-2.5, 2.3], y: [-1.9, 1.7] });   // equal aspect: ~62 px per unit
+    g.axes({ x: "w_1", y: "w_2", at: [-2.5, -1.9] });
+    g.contours(fglob, [0.45, 1.25], { color: "gray" });   // circles r = 0.6, 1.0
+    const ideal = gd([2.5, 2.5], ws, start, U);
+    g.path(ideal, { color: "gray", dashed: true, width: 1.3 });
+    const ends = clients.map((cl, i) => {
+      if (cl.ring) g.contours((x, y) => 0.5 * (cl.A[0] * (x - cl.c[0]) ** 2 + cl.A[1] * (y - cl.c[1]) ** 2), [cl.ring],
+                              { color: "blue", width: 0.9, dashed: i ? [3, 3] : false });
+      const p = gd(cl.A, cl.c, start, U);
+      g.path(p, { color: "blue", width: 1.6, dashed: i ? [6, 4] : false });
+      if (cl.cl) g.point(cl.c, { color: "blue", r: 2.4, label: cl.cl, tex: true, at: cl.cat, size: 15 });
+      g.point(p[U], { color: "blue", r: 3, label: cl.el, tex: true, at: cl.eat, size: 15 });
+      return p[U];
+    });
+    const avg = [(ends[0][0] + ends[1][0]) / 2, (ends[0][1] + ends[1][1]) / 2];
+    g.line(ends[0], ends[1], { color: "gray", dashed: [2, 3], width: 0.9 });
+    g.point(start, { label: "w_t", tex: true, at: [-8, 4], size: 15 });
+    g.point(ws, { color: "green", r: 3.4, label: "w^\\star", tex: true, at: o.wsat, size: 15 });
+    g.point(avg, { color: o.avgcol, r: 3.8 });
+    g.line(o.avglab, avg, { color: "gray", width: 0.8, rough: 0.3 });
+    g.tex(o.avglab, "w_{t+1}", { color: o.avgcol, size: 15, anchor: "end", dx: -3, dy: 4 });
+    if (o.drift) {
+      g.line(avg, ideal[U], { color: "red", width: 1.8 });
+      g.point(ideal[U], { color: "gray", r: 2.6 });
+      g.text(avg, "drift", { color: "red", dx: o.driftat[0], dy: o.driftat[1], size: 18 });
+    }
+  }
+  panel("#iid", [
+    { A: [2.5, 2.5], c: [1.32, 0.52], el: "", eat: [0, 0] },
+    { A: [2.5, 2.5], c: [1.08, 0.68], el: "", eat: [0, 0] },
+  ], { avgcol: "green", avglab: [-0.2, -0.6], wsat: [8, -10], drift: false });
+  panel("#noniid", [
+    { A: [1, 4], c: [-2, 1], ring: 0.1, cl: "w^\\star_1", cat: [10, 20], el: "w^1", eat: [-8, -12] },
+    { A: [4, 1], c: [2, -1], ring: 0.1, cl: "w^\\star_2", cat: [10, -8], el: "w^2", eat: [-8, 14] },
+  ], { avgcol: "red", avglab: [-0.4, -1.0], wsat: [8, -10], drift: true, driftat: [34, 0] });
+
+  // ---------- page 4: 1-D example ----------
+  {
+    const g = Sketch.fig("#oned", { w: 360, h: 300, x: [-1.2, 6.2], y: [-2.6, 8.4] });
+    g.axes({ x: "w", y: "", at: [-1.2, 0] });
+    const F1 = (w) => 0.5 * w * w, F2 = (w) => 1.5 * (w - 4) ** 2, f = (w) => 0.5 * F1(w) + 0.5 * F2(w);
+    g.fn(F1, -1.0, 4.0, { color: "blue", width: 1.5 });
+    g.fn(F2, 4 - Math.sqrt(16 / 3), 4 + Math.sqrt(16 / 3), { color: "blue", width: 1.5, dashed: [6, 4] });
+    g.fn(f, 3 - Math.sqrt(5), 3 + Math.sqrt(5), { color: "ink", width: 1.9 });
+    g.tex([-0.95, 7.7], "F_1", { color: "blue", size: 15 });
+    g.tex([5.7, 7.7], "F_2", { color: "blue", size: 15 });
+    g.tex([5.2, 5.6], "f", { size: 16, dx: 8 });
+    g.point([0, 0], { color: "blue", label: "c_1", tex: true, at: [0, 14], anchor: "middle", size: 13 });
+    g.point([4, 0], { color: "blue", label: "c_2", tex: true, at: [0, 14], anchor: "middle", size: 13 });
+    g.line([3, 0], [3, 3], { color: "green", dashed: true, width: 1 });
+    g.line([2, 0], [2, 4], { color: "red", dashed: true, width: 1 });
+    g.point([3, 3], { color: "green", r: 3.8 });
+    g.text([3, 3], "w* = 3", { color: "green", dx: 8, dy: 22, size: 17 });
+    g.point([2, 4], { color: "red", r: 3.8 });
+    g.text([2, 4], "mean of optima = 2", { color: "red", dx: -8, dy: 14, anchor: "end", size: 16 });
+    g.tex([2, 0], "2", { color: "red", anchor: "middle", base: "top", dy: 5, size: 12 });
+    g.tex([3, 0], "3", { color: "green", anchor: "middle", base: "top", dy: 5, size: 12 });
+    // where each client pulls from w* = 3 (direction of -F_k'(3))
+    g.arrow([3, -1.5], [1.8, -1.5], { color: "blue", width: 1.6 });
+    g.arrow([3, -1.5], [4.2, -1.5], { color: "blue", width: 1.6, dashed: [5, 3] });
+    g.text([1.8, -1.5], "client 1", { color: "blue", dx: -6, dy: 5, anchor: "end", size: 16 });
+    g.text([4.2, -1.5], "client 2", { color: "blue", dx: 6, dy: 5, size: 16 });
+    g.text([3, -1.5], "pull at w*", { color: "gray", dy: 20, anchor: "middle", size: 15 });
+  }
+});
+</script>
+</body>
+</html>
