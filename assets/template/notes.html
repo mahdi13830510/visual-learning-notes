@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOPIC — notes</title>
+<!-- Copy notes.css and sketch.js next to this file. Pinned CDN versions; the page also renders offline
+     with fallback fonts, but KaTeX and rough.js must be reachable (or vendored next to the file). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+<link rel="stylesheet" href="notes.css">
+<script src="sketch.js"></script>
+</head>
+<body>
+
+<!-- Optional, screen only: links to the PDF and the handwriting blueprint. Removed when printing. -->
+<nav class="bar screen-only"><span>TOPIC</span><a href="notes.pdf">PDF</a><a href="blueprint.md">Handwriting blueprint</a></nav>
+
+<!-- ============ PAGE 1 — one central purpose per page ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">Title</h1>
+    <p class="problem"><b>Problem:</b> one line — what we want and why the obvious approach fails.</p>
+    <span class="pno">1/2</span>
+  </header>
+
+  <div class="row l">
+    <div class="col">
+      <h2><span class="n">1</span>Picture first</h2>
+      <div class="fig" id="fig1"></div>
+      <span class="cap note">caption = what to notice, not a title</span>
+    </div>
+    <div class="col">
+      <h2><span class="n">2</span>Then the math</h2>
+      <div class="eq box" data-color="blue">$$\theta_{t+1} = \theta_t - \eta\,\nabla L(\theta_t)$$</div>
+      <p class="note">annotation: <b>why</b> this term is here</p>
+    </div>
+  </div>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> one sentence the student must be able to say from memory.
+  </div>
+</section>
+
+<script>
+Sketch.draw(() => {
+  const f = Sketch.fig("#fig1", { w: 300, h: 210, x: [-3, 3], y: [-2, 2] });
+  f.axes({ x: "\\theta_1", y: "\\theta_2" });
+  f.contours((x, y) => x * x + 3 * y * y, [0.6, 1.8, 3.6, 6]);
+  f.point([0, 0], { color: "green", label: "min" });
+});
+</script>
+</body>
+</html>
