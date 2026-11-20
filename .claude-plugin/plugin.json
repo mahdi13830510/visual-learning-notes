@@ -1,0 +1,23 @@
+{
+  "name": "visual-learning-notes",
+  "displayName": "Visual Learning Notes",
+  "version": "1.0.0",
+  "description": "Turns lectures, slides, papers or a topic into compact visual study notes you can copy by hand: one purpose per page, small meaningful diagrams, annotated equations, a page-by-page handwriting blueprint, printable A4 PDFs and native Excalidraw files.",
+  "author": {
+    "name": "Mahdi Dolati",
+    "url": "https://github.com/mahdi13830510"
+  },
+  "homepage": "https://mahdi13830510.github.io/visual-learning-notes/",
+  "repository": "https://github.com/mahdi13830510/visual-learning-notes",
+  "license": "MIT",
+  "keywords": [
+    "notes",
+    "lecture-notes",
+    "study-notes",
+    "education",
+    "learning",
+    "math",
+    "excalidraw",
+    "handwriting"
+  ]
+}
