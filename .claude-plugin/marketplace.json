@@ -1,0 +1,22 @@
+{
+  "name": "visual-learning-notes",
+  "description": "Visual Learning Notes: compact, hand-copyable visual study notes for technical subjects, with handwriting blueprints, A4 PDFs and Excalidraw diagrams.",
+  "owner": {
+    "name": "Mahdi Dolati",
+    "url": "https://github.com/mahdi13830510"
+  },
+  "plugins": [
+    {
+      "name": "visual-learning-notes",
+      "source": "./",
+      "description": "Lecture-quality visual notes: problem first, picture before equation, every element earns its place.",
+      "category": "education",
+      "tags": [
+        "notes",
+        "education",
+        "learning",
+        "study"
+      ]
+    }
+  ]
+}
