@@ -1,0 +1,133 @@
+/* notes.css — A4 notebook pages for visual-learning-notes.
+   Restrained on purpose: ink on dotted paper, colour only where it carries meaning. */
+
+:root {
+  --ink: #23262b;
+  --soft: #4a4f57;
+  --gray: #8b9098;   /* sketch.js colour names: ink soft gray blue red green orange faint */
+  --blue: #1f5fae;   /* mathematical objects, key variables */
+  --red: #c0392b;    /* warnings, failure, wrong direction */
+  --green: #2c7a3f;  /* conclusions, things that work */
+  --orange: #cc7414; /* assumptions, observations */
+  --paper: #fffefa;
+  --dot: #d9dde3;
+  --hand: "Kalam", "Comic Neue", "Segoe Print", cursive;      /* main writing */
+  --note: "Caveat", "Kalam", "Segoe Print", cursive;          /* margin annotations */
+  --zoom: 1;
+}
+
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; background: #e9e7e1; color: var(--ink); font-family: var(--hand); }
+
+/* ---------- the page ---------- */
+.page {
+  position: relative;
+  width: 210mm; height: 297mm;
+  padding: 13mm 13mm 11mm 15mm;
+  margin: 24px auto;
+  overflow: hidden;
+  background-color: var(--paper);
+  background-image: radial-gradient(circle, var(--dot) 0.55px, transparent 0.75px);
+  background-size: 5mm 5mm;
+  background-position: 2.5mm 2.5mm;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.06);
+  font-size: 15px; line-height: 1.32;
+  display: flex; flex-direction: column; gap: 3.2mm;
+  zoom: var(--zoom);
+}
+@media print {
+  body { background: none; }
+  .page { margin: 0; box-shadow: none; zoom: 1; break-after: page; }
+  .screen-only { display: none !important; }
+}
+.page > svg.marks { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+
+/* page header: title + one-line central problem */
+.page > header { display: flex; align-items: baseline; gap: 5mm; flex-wrap: wrap; }
+.page h1 { font: 700 27px/1.1 var(--hand); margin: 0; letter-spacing: -0.2px; }
+.page .pno { position: absolute; top: 9mm; right: 13mm; font: 500 17px var(--note); color: var(--gray); }
+.page > header { padding-right: 12mm; }
+.problem { font-size: 15.5px; margin: 0; color: var(--soft); }
+.problem b { color: var(--ink); }
+
+/* section labels inside a page: small, handwritten, underlined — never big headings */
+.page h2 { font: 700 18px/1.15 var(--hand); margin: 0 0 1.2mm; }
+.page h2 .n { display: inline-flex; align-items: center; justify-content: center; width: 19px; height: 19px;
+  margin-right: 6px; border: 1.3px solid var(--gray); border-radius: 50%; color: var(--gray);
+  font: 700 12.5px/1 var(--hand); vertical-align: 2px; }
+
+/* ---------- layout ---------- */
+.row { display: grid; gap: 6mm; align-items: start; }
+.row.c2 { grid-template-columns: 1fr 1fr; }
+.row.c3 { grid-template-columns: 1fr 1fr 1fr; }
+.row.l { grid-template-columns: 1.25fr 1fr; }   /* wide left */
+.row.r { grid-template-columns: 1fr 1.25fr; }   /* wide right */
+.col { display: flex; flex-direction: column; gap: 2.2mm; min-width: 0; }
+.center { align-items: center; text-align: center; }
+.grow { flex: 1; }
+.rule { border: 0; border-top: 1.2px dashed var(--dot); margin: 0.5mm 0; }
+
+/* figures: no frame; caption is a handwritten note */
+.fig { display: flex; flex-direction: column; align-items: center; gap: 0.6mm; min-width: 0; }
+.fig svg.sketch { max-width: 100%; height: auto; overflow: visible; }
+.fig .cap { font: 500 16px/1.15 var(--note); color: var(--soft); text-align: center; }
+
+/* text */
+p { margin: 0; }
+ul.tight, ol.tight { margin: 0; padding-left: 5mm; }
+ul.tight li, ol.tight li { margin: 0.4mm 0; }
+ul.dash { list-style: none; padding-left: 4mm; margin: 0; }
+ul.dash li::before { content: "–"; margin-left: -4mm; width: 4mm; display: inline-block; color: var(--gray); }
+.small { font-size: 13.5px; }
+.chain { font-size: 15px; }                         /* cause → effect → … */
+.chain .to { color: var(--gray); margin: 0 3px; }
+.chain .bad { color: var(--red); }
+
+/* equations */
+.eq { margin: 0.6mm 0; }
+.eq .katex-display { margin: 0.6mm 0; }
+.eq.big .katex { font-size: 1.28em; }
+.katex { font-size: 1.08em; }
+.lhs { color: var(--blue); }
+.derive { display: grid; grid-template-columns: auto minmax(26mm, 1fr); column-gap: 4mm; row-gap: 0.4mm; align-items: baseline; }
+.derive > div:not(.why) { white-space: nowrap; }
+.derive .katex-display { margin: 0.3mm 0; text-align: left; }
+.derive .katex-display > .katex { text-align: left; }
+.derive > .why { font: 500 15.5px/1.1 var(--note); color: var(--soft); }
+
+/* annotations — the handwritten voice of the notes */
+.note { font: 500 17.5px/1.12 var(--note); color: var(--soft); }
+.note b, .tag { font-weight: 700; }
+.note .katex, .cap .katex, .why .katex { font-size: 0.9em; }   /* Caveat runs small; keep math in scale */
+.tag { font-family: var(--note); font-size: 18px; margin-right: 3px; }
+.blue { color: var(--blue); }  .red { color: var(--red); }  .green { color: var(--green); }
+.orange { color: var(--orange); }  .gray { color: var(--gray); }
+.added::before { content: "+ "; font: 700 17px var(--note); color: var(--orange); }   /* Mode A: not from the lecturer */
+.srcref { font: 500 14px var(--note); color: var(--gray); }                           /* "slide 12" */
+
+/* equations that get a hand-drawn box hug their content */
+.eq.box, .eq.circ { width: fit-content; max-width: 100%; padding: 0 3mm; }
+
+/* key statement: boxed by sketch.js (.box), so no CSS border */
+.key { padding: 1.4mm 2.5mm; }
+
+/* comparison table — only when comparison is the point */
+table.cmp { border-collapse: collapse; font-size: 14px; }
+table.cmp th, table.cmp td { padding: 0.8mm 2.5mm; text-align: left; vertical-align: top; }
+table.cmp th { font-weight: 700; border-bottom: 1.3px solid var(--ink); }
+table.cmp td { border-bottom: 1px dashed var(--dot); }
+
+/* end-of-topic blocks */
+.remember ol { margin: 0.6mm 0 0; padding-left: 5.5mm; }
+.remember li { margin: 0.5mm 0; }
+.quiz ol { margin: 0.6mm 0 0; padding-left: 5.5mm; }
+.quiz li { margin: 0.7mm 0; }
+.bottom { margin-top: auto; }
+
+/* screen-only toolbar on published pages */
+.bar { max-width: 210mm; margin: 18px auto 0; padding: 0 4px; display: flex; gap: 14px; flex-wrap: wrap;
+       font: 15px/1.4 system-ui, sans-serif; color: #555; }
+.bar a { color: #1f5fae; }
+@media (max-width: 600px) { .page { margin: 12px auto; } .bar { padding: 0 16px; } }
