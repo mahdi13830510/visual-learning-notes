@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Momentum and Adam — lecture notes</title>
+<meta name="description" content="Handwritable lecture-companion notes for Lecture 7 (Momentum, RMSProp, Adam): ravine picture, steady-state step derivations, bias correction, worked numbers, and a corrected Adam update.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+<link rel="stylesheet" href="notes.css">
+<script src="sketch.js"></script>
+<style>
+  .eqnote { display: grid; grid-template-columns: auto 1fr; column-gap: 4mm; align-items: center; }
+  .eqnote > .why { font: 500 16px/1.1 var(--note); color: var(--soft); }
+  table.cmp td, table.cmp th { font-size: 14.5px; }
+  .derive .katex-display { margin: 0.8mm 0; }   /* template leaves KaTeX default 1em margins here */
+</style>
+</head>
+<body>
+<nav class="bar screen-only"><b>Momentum &amp; Adam (lecture companion)</b><a href="notes.pdf">PDF (A4)</a><a href="https://github.com/mahdi13830510/visual-learning-notes/blob/main/tests/sessions/adam-lecture/blueprint.md">Handwriting blueprint</a><a href="../../../">visual-learning-notes</a></nav>
+
+<!-- ============ PAGE 1 — momentum ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">Momentum</h1>
+    <p class="problem"><b>Problem:</b> in a ravine $g$ points mostly <i>across</i> → SGD zig-zags, crawls along. <span class="srcref">slides 2, 4–5</span></p>
+    <span class="pno">1/4</span>
+  </header>
+
+  <div class="row l">
+    <div class="col">
+      <h2><span class="n">1</span>Picture: a ravine</h2>
+      <div class="fig" id="ravine"></div>
+      <span class="cap note">same α, 8 steps each, from ● <span class="added">real runs, full gradients, α = 0.095, on $f=\tfrac12(x^2+20y^2)$</span></span>
+    </div>
+    <div class="col">
+      <h2><span class="n">2</span>Update <span class="srcref">slide 4</span></h2>
+      <div class="eq box" data-color="blue">$$\begin{aligned}
+        v_t &= \underbrace{\beta\, v_{t-1}}_{\text{memory}} + \;g_t\\
+        w_{t+1} &= w_t - \alpha\, v_t
+      \end{aligned}$$</div>
+      <p class="note">$v_t$ = velocity: a decaying <b>sum</b> of past gradients. β ≈ 0.9.</p>
+      <p class="note"><span class="tag">Intuition:</span> ball rolling downhill, keeps its speed.</p>
+      <p class="chain small">across-valley $g$ flips sign <span class="to">→</span> terms cancel in $v_t$ <span class="to">→</span> <span class="green">oscillation damped</span></p>
+      <p class="chain small">along-valley $g$ same sign <span class="to">→</span> terms add up <span class="to">→</span> <span class="green">accelerates</span></p>
+      <p class="note red">too much memory (β = 0.9 here) → overshoots <span class="srcref">slide 4</span></p>
+    </div>
+  </div>
+
+  <h2><span class="n">3</span>How big is the step? <span class="srcref">slide 6</span></h2>
+  <div class="row c2">
+    <div class="col">
+      <p class="small"><b>constant</b> $g_t = g$:</p>
+      <div class="derive">
+        <div>$$v_t = g\,(1+\beta+\dots+\beta^{t-1})$$</div><div class="why">unroll the recursion, $v_0=0$</div>
+        <div>$$\phantom{v_t} = g\,\frac{1-\beta^{t}}{1-\beta}$$</div><div class="why">geometric sum</div>
+        <div>$$\phantom{v_t} \to \boxed{\frac{g}{1-\beta}}$$</div><div class="why">$\beta^t\to 0$</div>
+      </div>
+      <p class="note">effective lr $=\dfrac{\alpha}{1-\beta}$; β = 0.9 → <b class="green">10×</b></p>
+      <p class="small gray">check: $v = 1,\ 1.9,\ 2.71,\ 3.44,\dots \to 10$ &nbsp;($g=1$)</p>
+    </div>
+    <div class="col">
+      <p class="small"><span class="added"><b>alternating</b> $g_t = (-1)^t g$:</span></p>
+      <div class="derive">
+        <div>$$v_t = g\,(1-\beta+\beta^2-\dots)$$</div><div class="why">signs alternate</div>
+        <div>$$|v_t| \to \boxed{\frac{|g|}{1+\beta}}$$</div><div class="why">geometric sum, ratio $-\beta$</div>
+      </div>
+      <p class="note">β = 0.9: across-valley ×0.53 &nbsp;vs&nbsp; along-valley ×10</p>
+      <p class="note"><span class="tag">Notice:</span> ratio $\frac{1+\beta}{1-\beta} = 19$: that is the whole trick.</p>
+    </div>
+  </div>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> momentum sums gradients, so consistent directions grow by $\tfrac{1}{1-\beta}$ and oscillating ones shrink.
+  </div>
+</section>
+
+<!-- ============ PAGE 2 — RMSProp ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">RMSProp</h1>
+    <p class="problem"><b>Problem:</b> one α for all parameters, but their gradient sizes differ a lot. <span class="srcref">slide 7</span></p>
+    <span class="pno">2/4</span>
+  </header>
+
+  <div class="row r">
+    <div class="col">
+      <h2><span class="n">1</span>Picture</h2>
+      <div class="fig" id="rms"></div>
+      <span class="cap note">at $w_t$, $g = (-2, 20)$: SGD goes almost straight across; RMSProp moves ≈ α in each coordinate <span class="added">directions only, lengths not to scale</span></span>
+    </div>
+    <div class="col">
+      <h2><span class="n">2</span>Update <span class="srcref">slide 7</span></h2>
+      <div class="eq box" data-color="blue">$$\begin{aligned}
+        s_t &= \rho\, s_{t-1} + (1-\rho)\, \underbrace{g_t^2}_{\text{elementwise}}\\
+        w_{t+1} &= w_t - \alpha\,\frac{g_t}{\underbrace{\sqrt{s_t}}_{\approx\,\text{RMS of }g} + \;\varepsilon}
+      \end{aligned}$$</div>
+      <p class="small gray">ρ ≈ 0.99, ε = 10⁻⁸</p>
+      <p class="note"><span class="added">$s_t$ = running <b>average</b> of $g^2$ over ≈ $\frac{1}{1-\rho}$ = 100 steps</span></p>
+      <p class="note"><span class="added">ε: only stops division by 0</span></p>
+      <p class="chain small">large $|g|$ <span class="to">→</span> large $\sqrt{s}$ <span class="to">→</span> small effective lr $\frac{\alpha}{\sqrt{s}}$</p>
+      <p class="chain small">small $|g|$ <span class="to">→</span> small $\sqrt{s}$ <span class="to">→</span> large effective lr</p>
+    </div>
+  </div>
+
+  <h2><span class="n">3</span><span class="added">Worked number</span></h2>
+  <div class="row c2">
+    <div class="col">
+      <p class="small">2 parameters, constant $g = (2,\ 20)$:</p>
+      <div class="derive">
+        <div>$$s_t \to g^2 = (4,\ 400)$$</div><div class="why">average of a constant</div>
+        <div>$$\sqrt{s_t} \to (2,\ 20)$$</div><div class="why"></div>
+        <div>$$\alpha\,g_t/\sqrt{s_t} \to \alpha\,(1,\ 1)$$</div><div class="why">= α · sign($g$)</div>
+      </div>
+      <p class="note"><span class="tag">Notice:</span> both coordinates move ≈ α: the scale of $g$ drops out.</p>
+    </div>
+    <div class="col">
+      <p class="small">first step, $s_0 = 0$:</p>
+      <div class="derive">
+        <div>$$s_1 = 0.01\, g^2$$</div><div class="why">$1-\rho = 0.01$</div>
+        <div>$$\sqrt{s_1} = 0.1\,|g|$$</div><div class="why"></div>
+        <div>$$\alpha\,g_1/\sqrt{s_1} = 10\,\alpha\cdot\text{sign}(g)$$</div><div class="why red">10× too big</div>
+      </div>
+      <p class="note"><span class="added">$s$ starts at 0 → biased low early → fixed by Adam's bias correction (next page)</span></p>
+    </div>
+  </div>
+
+  <p class="note red"><span class="added"><span class="tag red">Limitation:</span> scaling is per coordinate. A ravine at 45° to the axes is <b>not</b> made round.</span></p>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> divide each coordinate by its own gradient RMS, so every parameter steps about α.
+  </div>
+</section>
+
+<!-- ============ PAGE 3 — Adam ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">Adam = Momentum + RMSProp</h1>
+    <p class="problem"><b>Problem:</b> want smoothed direction <i>and</i> per-parameter scale. <span class="srcref">slides 8–9</span></p>
+    <span class="pno">3/4</span>
+  </header>
+
+  <h2><span class="n">1</span>The update <span class="srcref">slide 8</span></h2>
+  <div class="eqnote">
+    <div class="eq">$$m_t = \beta_1 m_{t-1} + (1-\beta_1)\, g_t$$</div><div class="why"><b class="blue">direction</b>: average of $g$ (momentum)</div>
+    <div class="eq">$$v_t = \beta_2 v_{t-1} + (1-\beta_2)\, g_t^2$$</div><div class="why"><b class="blue">scale</b>: average of $g^2$ (RMSProp)</div>
+    <div class="eq">$$\hat m_t = \frac{m_t}{1-\beta_1^{\,t}},\qquad \hat v_t = \frac{v_t}{1-\beta_2^{\,\color{#cc7414}t}}$$</div><div class="why">bias correction ($t$ = step count, a power)</div>
+    <div class="eq box" data-color="blue">$$w_{t+1} = w_t - \alpha\,\frac{\hat m_t}{\sqrt{\hat v_t}+\varepsilon}$$</div><div class="why">≈ α per coordinate, sign from $\hat m$</div>
+  </div>
+  <p class="small gray">defaults: α = 10⁻³, β₁ = 0.9, β₂ = 0.999, ε = 10⁻⁸</p>
+  <p class="note orange"><span class="added">slide 8 writes $\hat v_t = v_t/(1-\beta_2)$; standard (Kingma &amp; Ba) is $1-\beta_2^{\,t}$, matching $\hat m_t$. Missing power → $\hat v$ up to 1000× too big late in training.</span></p>
+  <p class="note"><span class="added"><b>Notation:</b> $v_t$ here ≠ the velocity $v_t$ of slide 4. With β = β₁: $m_t = (1-\beta_1)\cdot$(slide-4 velocity), same direction, rescaled.</span></p>
+
+  <h2><span class="n">2</span>Why bias correction? <span class="srcref">slide 9</span></h2>
+  <div class="row l">
+    <div class="col">
+      <div class="derive">
+        <div>$$m_t = (1-\beta_1)\sum_{i=1}^{t}\beta_1^{\,t-i} g_i$$</div><div class="why">unroll, $m_0 = 0$</div>
+        <div>$$\mathbb E[m_t] = \mathbb E[g]\,(1-\beta_1)\sum_{i=1}^{t}\beta_1^{\,t-i}$$</div><div class="why orange">assume $\mathbb E[g_i]$ constant</div>
+        <div>$$\phantom{\mathbb E[m_t]} = \mathbb E[g]\,\boxed{(1-\beta_1^{\,t})}$$</div><div class="why">geometric sum</div>
+      </div>
+      <p class="note">→ $m_t$ is shrunk toward 0 by $(1-\beta_1^t)$; dividing it out gives $\mathbb E[\hat m_t] = \mathbb E[g]$. Same for $v_t$ with $g^2$, $\beta_2$.</p>
+    </div>
+    <div class="col">
+      <div class="fig" id="bias"></div>
+      <span class="cap note">at $t=1$: 0.1 and 0.001. β₁ factor ≈ 1 after ~40 steps; β₂ factor needs ~3000</span>
+    </div>
+  </div>
+
+  <h2><span class="n">3</span><span class="added">Worked number: constant $g = 2$</span></h2>
+  <table class="cmp">
+    <tr><th></th><th>$m_t$</th><th>$v_t$</th><th>$\hat m_t$</th><th>$\hat v_t$</th><th>step / α</th></tr>
+    <tr><td>$t=1$, corrected</td><td>0.2</td><td>0.004</td><td>2</td><td>4</td><td class="green">1</td></tr>
+    <tr><td>$t=1$, no correction</td><td>0.2</td><td>0.004</td><td>—</td><td>—</td><td class="red">3.16</td></tr>
+    <tr><td>$t=1000$, slide-8 typo</td><td>2.0</td><td>2.53</td><td>2</td><td>2529</td><td class="red">0.04</td></tr>
+  </table>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> Adam steps along averaged $g$, scaled per coordinate; bias correction undoes the zero start.
+  </div>
+</section>
+
+<!-- ============ PAGE 4 — compare, practice, test ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">Side by side &amp; in practice</h1>
+    <p class="problem"><b>Problem:</b> which mechanism fixes which failure of SGD? <span class="srcref">slides 10–11</span></p>
+    <span class="pno">4/4</span>
+  </header>
+
+  <h2><span class="n">1</span>What each method tracks <span class="srcref">slide 11</span></h2>
+  <table class="cmp">
+    <tr><th></th><th>keeps</th><th>fixes</th><th>steady step, const. $g$</th><th><span class="added">extra memory</span></th></tr>
+    <tr><td>SGD</td><td>nothing</td><td>—</td><td>$\alpha g$</td><td>0</td></tr>
+    <tr><td>Momentum</td><td>sum of $g$</td><td>direction (zig-zag)</td><td>$\alpha g/(1-\beta)$</td><td>1 vector</td></tr>
+    <tr><td>RMSProp</td><td>avg of $g^2$</td><td>per-parameter scale</td><td>$\approx\alpha\,\text{sign}(g)$</td><td>1 vector</td></tr>
+    <tr><td>Adam</td><td>both + bias corr.</td><td>both</td><td>$\approx\alpha\,\text{sign}(g)$</td><td>2 vectors</td></tr>
+  </table>
+  <p class="note"><span class="tag">Notice:</span> <span class="added">momentum's step grows with $|g|$; RMSProp/Adam steps don't → α in Adam ≈ max step size per coordinate.</span></p>
+
+  <h2><span class="n">2</span>In practice <span class="srcref">slide 10</span></h2>
+  <ul class="dash">
+    <li>works well out of the box; default for transformers</li>
+    <li class="red">sometimes generalizes worse than SGD + momentum <span class="srcref">(Wilson et al. 2017)</span></li>
+    <li><b>AdamW</b>: decoupled weight decay <span class="srcref">(Loshchilov &amp; Hutter 2019)</span><br>
+      <span class="added note">L2 added to $g$ gets divided by $\sqrt{\hat v}$ → AdamW instead subtracts $\alpha\lambda w_t$ directly</span></li>
+    <li>learning-rate warmup often used<br>
+      <span class="added note">one common reason: early $\hat v_t$ averages few gradients → noisy scale</span></li>
+  </ul>
+
+  <div class="row c2" style="margin-top:6mm">
+    <div class="col quiz">
+      <h2>Test your understanding</h2>
+      <ol class="small">
+        <li>Gradient alternates $+g,-g,+g,\dots$. What does momentum's $v_t$ tend to with β = 0.9? Why is that good?</li>
+        <li>Rebuild the steady state $g/(1-\beta)$ from the recursion. What changes in Adam's $m_t$?</li>
+        <li>You scale the loss by 100. How does the step change for SGD, momentum, and Adam?</li>
+        <li>Remove bias correction. Is Adam's first step too big or too small, and by how much (β defaults)?</li>
+        <li>A ravine runs at 45° to the axes. Does RMSProp help? Does momentum?</li>
+      </ol>
+    </div>
+    <div class="col remember">
+      <h2>Remember</h2>
+      <ol class="small">
+        <li>Momentum: cancel what oscillates, add what is consistent ($\times\frac{1}{1-\beta}$).</li>
+        <li>RMSProp: divide by gradient RMS → each parameter steps ≈ α.</li>
+        <li>Adam = averaged direction ÷ RMS scale, both bias-corrected by $1-\beta^t$.</li>
+        <li>Bias correction matters early: $m_0 = v_0 = 0$.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<script>
+Sketch.draw(() => {
+  // ---------- page 1: ravine f = 1/2 (x^2 + 20 y^2), start (-9, 1.5), alpha = 0.095 ----------
+  const f = Sketch.fig("#ravine", { w: 380, h: 270, x: [-10.5, 6], y: [-2.6, 2.6] });
+  const F = (x, y) => 0.5 * (x * x + 20 * y * y);
+  f.contours(F, [3, 12, 30, 55]);
+  f.point([0, 0], { color: "green", label: "min", at: [4, -8] });
+  const sgd  = [[-9,1.5],[-8.145,-1.35],[-7.371,1.215],[-6.671,-1.093],[-6.037,0.984],[-5.464,-0.886],[-4.945,0.797],[-4.475,-0.717],[-4.05,0.646]];
+  const mom5 = [[-9,1.5],[-8.145,-1.35],[-6.944,-0.21],[-5.683,0.759],[-4.513,-0.199],[-3.5,-0.3],[-2.66,0.219],[-1.988,0.062],[-1.463,-0.135]];
+  const mom9 = [[-9,1.5],[-8.14,-1.35],[-6.6,-1.35],[-4.59,1.21],[-2.34,1.22],[-0.09,-1.09],[1.94,-1.09],[3.59,0.98],[4.72,0.98]];
+  f.path(mom9, { smooth: false, color: "red", dashed: true, width: 1.2 });
+  f.path(sgd,  { smooth: false, color: "ink", width: 1.3 });
+  f.path(mom5, { smooth: false, color: "green", width: 1.8 });
+  f.point([-9, 1.5], { r: 3.5 });
+  f.text([-7.371, 1.215], "SGD", { dy: -9, anchor: "middle", size: 16 });
+  f.text([-2.9, -1.62], "momentum β=0.5", { anchor: "middle", color: "green", size: 16 });
+  f.text([4.72, 0.98], "β=0.9", { dy: -10, anchor: "middle", color: "red", size: 16 });
+  f.text([4.72, 0.98], "overshoots", { dy: 40, anchor: "middle", color: "red", size: 15 });
+  f.arrow([-2.5, -2.35], [3.5, -2.35], { color: "gray", width: 1, label: "along valley: small g", labelAt: "mid", labelOffset: [0, -7], size: 14 });
+
+  // ---------- page 2: RMSProp at point (-2, 1): g = (-2, 20) ----------
+  const r = Sketch.fig("#rms", { w: 320, h: 250, x: [-4.2, 1.4], y: [-1.5, 1.5] });
+  r.contours(F, [2, 12, 22]);
+  r.point([0, 0], { color: "green", label: "min", at: [7, 4] });
+  const p = [-2, 1];
+  r.point(p, { r: 3.5, label: "w_t", tex: true, at: [-8, -8] });
+  // -g = (2,-20) direction, drawn with scale 0.075
+  r.arrow(p, [p[0] + 2 * 0.075, p[1] - 20 * 0.075], { color: "ink", label: "-\\alpha g", tex: true, labelOffset: [-22, -4] });
+  // RMSProp step: alpha*(1,-1), drawn with scale 1.2
+  r.arrow(p, [p[0] + 1.2, p[1] - 1.2], { color: "green", width: 1.8, label: "RMSProp", labelOffset: [-6, 26], size: 16 });
+
+  // ---------- page 3: 1 - beta^t vs log10 t ----------
+  const b = Sketch.fig("#bias", { w: 300, h: 210, x: [0, 4.5], y: [0, 1.15], pad: 26 });
+  b.axes({ x: "\\log_{10} t", y: "1-\\beta^t" });
+  const tick = [0, 1, 2, 3, 4];
+  tick.forEach(k => b.text([k, 0], ["1", "10", "100", "1000", ""][k], { dy: 15, anchor: "middle", size: 13, color: "gray" }));
+  b.line([0, 1], [4, 1], { color: "gray", dashed: true, width: 0.9, rough: 0.3 });
+  b.text([0, 1], "1", { dx: -6, dy: 4, anchor: "end", size: 13, color: "gray" });
+  b.fn(L => 1 - Math.pow(0.9, Math.pow(10, L)), 0, 4, { color: "blue", width: 1.6, n: 80, rough: 0.3 });
+  b.fn(L => 1 - Math.pow(0.999, Math.pow(10, L)), 0, 4, { color: "orange", width: 1.6, n: 80, rough: 0.3 });
+  b.tex([1.3, 0.5], "\\beta_1=0.9", { color: "blue", size: 13, anchor: "start" });
+  b.tex([3.1, 0.22], "\\beta_2=0.999", { color: "orange", size: 13, anchor: "start" });
+  b.point([0, 0.1], { color: "blue", r: 2.5 });
+  b.point([0, 0.001], { color: "orange", r: 2.5 });
+});
+</script>
+</body>
+</html>
