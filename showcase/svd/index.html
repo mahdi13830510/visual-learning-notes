@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Singular Value Decomposition — visual notes</title>
+<meta name="description" content="Four pages of hand-drawn study notes on the SVD: a matrix as a map from the unit circle to an ellipse, what U, Σ and V each do, computing the SVD of a 2×2 matrix by hand, and what the singular values say about rank, norm, conditioning and low-rank approximation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
+<link rel="stylesheet" href="notes.css">
+<script src="sketch.js"></script>
+<style>
+  .chain .katex { font-size: 1em; }
+  .mini { font-size: 14px; }
+  table.cmp td.v { color: var(--blue); }
+  .quiz li, .remember li { font-size: 14.5px; }
+  /* derivation lines: left-aligned so the "=" signs line up */
+  .derive .katex-display { margin: 0.4mm 0; text-align: left; }
+  .derive .katex-display > .katex { text-align: left; }
+  .derive > .why { align-self: center; }
+</style>
+</head>
+<body>
+<nav class="bar screen-only"><b>Singular value decomposition</b><a href="notes.pdf">PDF (A4)</a><a href="https://github.com/mahdi13830510/visual-learning-notes/blob/main/showcase/svd/blueprint.md">Handwriting blueprint</a><a href="../../">visual-learning-notes</a></nav>
+
+<!-- ============ PAGE 1 — the picture ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">A matrix is a transformation</h1>
+    <span class="pno">1/4</span>
+    <p class="problem"><b>Problem:</b> what does $A$ do to space? Eigenvectors can't say in general: too few, not ⟂, none if $m \neq n$.</p>
+  </header>
+
+  <h2><span class="n">1</span>Unit circle in, ellipse out</h2>
+  <div class="fig" id="p1-map"></div>
+  <span class="cap note" style="text-align:center">Notice: the ⟂ pair $v_1, v_2$ lands on the ⟂ axes of the ellipse. $e_1$ (A's only eigenvector) does not: it stays on its line but is no axis.</span>
+
+  <div class="row l">
+    <div class="col">
+      <h2><span class="n">2</span>Read the picture as equations</h2>
+      <div class="eq box" data-color="blue">$$A\,{\color{#1f5fae}v_i} = \sigma_i\,{\color{#1f5fae}u_i}, \qquad i = 1, 2$$</div>
+      <p class="note">$v_i$: input directions, orthonormal <span class="gray">(in ℝⁿ)</span></p>
+      <p class="note">$u_i$: axis directions of the ellipse, orthonormal <span class="gray">(in ℝᵐ)</span></p>
+      <p class="note">$\sigma_i \ge 0$: semi-axis lengths = how much $A$ stretches $v_i$</p>
+      <p class="note gray">here: $\sigma_1 = 4,\ \sigma_2 = 1$ &nbsp;(worked out on p.3)</p>
+    </div>
+    <div class="col">
+      <h2><span class="n">3</span>Singular vectors as extremes</h2>
+      <div class="eq">$$\sigma_1 = \max_{\|x\|=1} \|Ax\| \quad\text{at } x = v_1$$</div>
+      <div class="eq">$$\sigma_2 = \max_{\|x\|=1,\ x \perp v_1} \|Ax\|$$</div>
+      <p class="note"><span class="tag">Intuition:</span> $v_1$ = the direction $A$ amplifies most; $v_2$ = the best of what's left.</p>
+      <p class="note">In 2-D, $\sigma_2$ is also the <i>min</i> stretch.</p>
+    </div>
+  </div>
+
+  <h2><span class="n">4</span>Both pairs at once</h2>
+  <div class="derive">
+    <div>$$A\,\underbrace{[\,v_1\ v_2\,]}_{V} = \underbrace{[\,u_1\ u_2\,]}_{U}\underbrace{\begin{bmatrix}\sigma_1 & 0\\ 0 & \sigma_2\end{bmatrix}}_{\Sigma}$$</div>
+    <div class="why">stack the two columns: $AV = U\Sigma$</div>
+    <div>$$\boxed{A = U\,\Sigma\,V^{\top}}$$</div>
+    <div class="why">multiply by $V^{\top}$ on the right: <span class="orange">$V$ orthogonal ⇒ $VV^{\top} = I$</span></div>
+  </div>
+
+  <p class="note orange"><span class="tag">Honest picture:</span> 2-D cartoon. For $A \in \mathbb{R}^{m\times n}$: unit sphere in ℝⁿ → ellipsoid in ℝᵐ with $r = \operatorname{rank} A$ non-zero axes.</p>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> every matrix turns the unit circle into an ellipse. The right singular vectors $v_i$ are the ⟂ inputs that land on its ⟂ axes $\sigma_i u_i$.
+  </div>
+</section>
+
+<!-- ============ PAGE 2 — the three factors ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">A = UΣVᵀ: rotate, stretch, rotate</h1>
+    <span class="pno">2/4</span>
+    <p class="problem"><b>Problem:</b> any $A$ is three simple moves. Which factor does what?</p>
+  </header>
+
+  <h2><span class="n">1</span>Follow $x$ through the factors (right to left)</h2>
+  <div class="fig" id="p2-pipe"></div>
+  <span class="cap note" style="text-align:center">same scale in all four panels · gray dot: $x = e_1$, tracked; it ends at $(2, 0)$ = first column of $A$ ✓</span>
+
+  <div class="row l">
+    <div class="col">
+      <h2><span class="n">2</span>What each factor does to $x$</h2>
+      <div class="eq">$$Ax = \underbrace{\ U\ }_{\textstyle\text{write along } u_i}\quad \underbrace{\ \Sigma\ }_{\textstyle\text{scale by } \sigma_i}\quad \underbrace{V^{\top}x}_{\textstyle\text{read along } v_i}$$</div>
+      <p class="note"><span class="tag">Why?</span> row $i$ of $V^{\top}$ is $v_i^{\top}$, so $(V^{\top}x)_i = v_i^{\top}x$.</p>
+      <p class="note">Unpack the product → a sum of rank-1 maps:</p>
+      <div class="eq box" data-color="blue">$$A = \sum_{i=1}^{r} \sigma_i\, u_i v_i^{\top}, \qquad Ax = \sum_{i=1}^{r} \sigma_i\, u_i\,(v_i^{\top}x)$$</div>
+      <p class="note">each term: read $x$ along $v_i$ → scale by $\sigma_i$ → write along $u_i$</p>
+    </div>
+    <div class="col">
+      <h2><span class="n">3</span>Shapes, for $A \in \mathbb{R}^{m\times n}$ ($m \gt n$)</h2>
+      <div class="fig" id="p2-shapes"></div>
+      <p class="note">$\Sigma$ is $m\times n$: diagonal on top, zeros below.</p>
+      <p class="note"><span class="blue">Thin SVD:</span> the zero rows kill all but $n$ columns of $U$ → keep $U_n \in \mathbb{R}^{m\times n}$.</p>
+    </div>
+  </div>
+
+  <div class="row c2">
+    <div class="col">
+      <p class="note orange"><span class="tag">Important assumptions</span> (the definition)</p>
+      <ul class="dash small">
+        <li>$U^{\top}U = I_m,\ V^{\top}V = I_n$ — orthogonal (rotations / reflections)</li>
+        <li>$\sigma_1 \ge \sigma_2 \ge \dots \ge \sigma_r \gt 0$, rest 0</li>
+        <li>exists for <b>every</b> matrix: any shape, any rank</li>
+      </ul>
+    </div>
+    <div class="col">
+      <p class="note red"><span class="tag">Watch out</span> (not unique)</p>
+      <ul class="dash small">
+        <li>$(u_i, v_i) \to (-u_i, -v_i)$ is equally valid</li>
+        <li>equal $\sigma$'s: only their span is fixed (e.g. $A = I$: any $V$)</li>
+        <li>$\det A \lt 0$: $U$ or $V$ includes a reflection, not just a rotation</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="n">4</span>Rank $r$: the singular vectors split both spaces</h2>
+  <p class="chain">$v_1 \dots v_r$ <span class="to">→</span> stretched by $\sigma_i \gt 0$ <span class="to">→</span> span the <b>row space</b> of $A$</p>
+  <p class="chain">$v_{r+1} \dots v_n$ <span class="to">→</span> $\sigma = 0$: crushed to $0$ <span class="to">→</span> span the <b>null space</b> $\mathcal{N}(A)$</p>
+  <p class="chain">$u_1 \dots u_r$ <span class="to">→</span> axes of the image ellipsoid <span class="to">→</span> span the <b>column space</b> (range)</p>
+  <p class="chain">$u_{r+1} \dots u_m$ <span class="to">→</span> never reached by any $Ax$ <span class="to">→</span> span $\mathcal{N}(A^{\top})$</p>
+  <p class="note">So $Ax = b$ is solvable iff $b \perp u_{r+1}, \dots, u_m$; and $x + $ (any mix of $v_{r+1..n}$) gives the same $Ax$.</p>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> $V^{\top}$ reads $x$ in the input axes $v_i$, $\Sigma$ scales each reading on its own, $U$ writes the results along the output axes $u_i$.
+  </div>
+</section>
+
+<!-- ============ PAGE 3 — computing it ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">Computing the SVD by hand</h1>
+    <span class="pno">3/4</span>
+    <p class="problem"><b>Problem:</b> two unknown rotations at once. Trick: form $A^{\top}A$, which makes $U$ cancel.</p>
+  </header>
+
+  <h2><span class="n">1</span>Remove $U$</h2>
+  <div class="derive">
+    <div>$$A^{\top}A = (U\Sigma V^{\top})^{\top}(U\Sigma V^{\top})$$</div>
+    <div class="why">start from the factorisation</div>
+    <div>$$\phantom{A^{\top}A} = V\Sigma^{\top}\,\underbrace{U^{\top}U}_{I}\,\Sigma V^{\top}$$</div>
+    <div class="why">$(XY)^{\top} = Y^{\top}X^{\top}$; <span class="orange">$U$ orthogonal</span></div>
+    <div>$$\phantom{A^{\top}A} = V\,\operatorname{diag}(\sigma_i^2)\,V^{\top}$$</div>
+    <div class="why">this is an eigendecomposition of the symmetric PSD matrix $A^{\top}A$</div>
+    <div>$$\boxed{A^{\top}A\,v_i = \sigma_i^2\,v_i, \qquad u_i = \tfrac{1}{\sigma_i}\,A v_i}$$</div>
+    <div class="why">$v_i$ = eigenvectors, $\sigma_i = \sqrt{\lambda_i}$; then $u_i$ from p.1 ($\sigma_i \gt 0$)</div>
+  </div>
+
+  <h2><span class="n">2</span>Worked example: $A = \begin{bmatrix}2 & 3\\ 0 & 2\end{bmatrix}$</h2>
+  <div class="derive">
+    <div>$$A^{\top}A = \begin{bmatrix}4 & 6\\ 6 & 13\end{bmatrix}$$</div>
+    <div class="why">columns' dot products: $4{+}0,\ 6{+}0,\ 9{+}4$</div>
+    <div>$$\lambda^2 - 17\lambda + 16 = 0 \;\Rightarrow\; \lambda = 16,\ 1$$</div>
+    <div class="why">trace 17, det $52 - 36 = 16$</div>
+    <div>$$\sigma_1 = 4, \qquad \sigma_2 = 1$$</div>
+    <div class="why">square roots</div>
+    <div>$$\begin{bmatrix}-12 & 6\\ 6 & -3\end{bmatrix} v_1 = 0 \;\Rightarrow\; {\color{#1f5fae}v_1 = \tfrac{1}{\sqrt5}(1, 2)},\ \ {\color{#1f5fae}v_2 = \tfrac{1}{\sqrt5}(-2, 1)}$$</div>
+    <div class="why">$A^{\top}A - 16I$; $v_2$: rotate $v_1$ by 90°</div>
+    <div>$$u_1 = \tfrac14 \cdot \tfrac{1}{\sqrt5}(8, 4) = {\color{#1f5fae}\tfrac{1}{\sqrt5}(2, 1)}, \quad u_2 = {\color{#1f5fae}\tfrac{1}{\sqrt5}(-1, 2)}$$</div>
+    <div class="why">$u_i = Av_i/\sigma_i$ — signs now match</div>
+  </div>
+
+  <div class="row l">
+    <div class="col">
+      <h2><span class="n">3</span>Check it (30 s each)</h2>
+      <p class="mini">$\sigma_1\sigma_2 = 4 = |\det A| = |2\cdot 2 - 3\cdot 0|$ ✓</p>
+      <p class="mini">$\sigma_1^2 + \sigma_2^2 = 17 = 2^2 + 3^2 + 0^2 + 2^2$ ✓</p>
+      <p class="mini">$u_1 \perp u_2$: $2\cdot(-1) + 1\cdot 2 = 0$ ✓</p>
+      <p class="note red"><span class="tag">Notice:</span> eigenvalues of $A$ are $2, 2$ with one eigenvector $e_1$: <b>not diagonalisable</b>, yet the SVD exists. And $\sigma \ne |\lambda|$.</p>
+    </div>
+    <div class="col">
+      <div class="fig" id="p3-grid"></div>
+      <span class="cap note">integer grid, all ×√5. Gray = $\sqrt5\,v_i$, blue = $\sqrt5\,Av_i$: 4× longer, same length, still ⟂</span>
+    </div>
+  </div>
+
+  <h2><span class="n">4</span>Rebuild $A$ from rank-1 pieces</h2>
+  <div class="eq">$$\underbrace{4\cdot\tfrac15\begin{bmatrix}2 & 4\\ 1 & 2\end{bmatrix}}_{\sigma_1 u_1 v_1^{\top}} + \underbrace{1\cdot\tfrac15\begin{bmatrix}2 & -1\\ -4 & 2\end{bmatrix}}_{\sigma_2 u_2 v_2^{\top}} = \tfrac15\begin{bmatrix}10 & 15\\ 0 & 10\end{bmatrix} = \begin{bmatrix}2 & 3\\ 0 & 2\end{bmatrix} \checkmark$$</div>
+  <p class="note">$u_1v_1^{\top}$ = column $(2,1)$ times row $(1,2)$, divided by $\sqrt5\cdot\sqrt5 = 5$</p>
+
+  <p class="note red"><span class="tag">Common mistake:</span> taking $u_i$ as eigenvectors of $AA^{\top}$ separately → signs can disagree and $U\Sigma V^{\top} \ne A$. Use $u_i = Av_i/\sigma_i$.</p>
+
+  <div class="bottom key box" data-color="green">
+    <span class="tag green">Key idea:</span> $A^{\top}A$ forgets the output rotation, so its eigenvectors are the $v_i$ and its eigenvalues are $\sigma_i^2$. Then $A$ itself hands you each $u_i$.
+  </div>
+</section>
+
+<!-- ============ PAGE 4 — what σ tells you ============ -->
+<section class="page">
+  <header>
+    <h1 class="ul">What the singular values tell you</h1>
+    <span class="pno">4/4</span>
+    <p class="problem"><b>Problem:</b> which numbers of $A$ decide its rank, size, stability and compressibility?</p>
+  </header>
+
+  <div class="row r">
+    <div class="col">
+      <h2><span class="n">1</span>Small $\sigma$ = flat direction</h2>
+      <div class="fig" id="p4-gd"></div>
+      <span class="cap note">contours of $f(x) = \tfrac12\|Ax\|^2$ for our $A$; GD with the best fixed step $\eta = 2/17$</span>
+    </div>
+    <div class="col">
+      <h2><span class="n">2</span>The σ dictionary</h2>
+      <table class="cmp">
+        <tr><th>quantity</th><th>in σ's</th><th>our $A$</th></tr>
+        <tr><td>rank</td><td>#$\{\sigma_i \gt 0\}$</td><td class="v">2</td></tr>
+        <tr><td>max stretch $\|A\|_2$</td><td>$\sigma_1$</td><td class="v">4</td></tr>
+        <tr><td>$\|A\|_F^2$</td><td>$\sum \sigma_i^2$</td><td class="v">17</td></tr>
+        <tr><td>$|\det A|$ (square)</td><td>$\prod \sigma_i$</td><td class="v">4</td></tr>
+        <tr><td>condition $\kappa(A)$</td><td>$\sigma_1/\sigma_n$</td><td class="v">4</td></tr>
+        <tr><td>Hessian $A^{\top}\!A$ of $f$</td><td>eigs $\sigma_i^2$, $\kappa = \kappa(A)^2$</td><td class="v">16</td></tr>
+      </table>
+      <p class="note">Contour axes lie along the $v_i$; half-widths $\propto 1/\sigma_i$.</p>
+      <p class="chain small">$\sigma_2 \ll \sigma_1$ <span class="to">→</span> long valley along $v_2$, $\kappa = 16$ <span class="to">→</span> <span class="bad">GD zig-zags across it; error shrinks only $\times\frac{\kappa-1}{\kappa+1} = \frac{15}{17}$ per step</span></p>
+    </div>
+  </div>
+
+  <div class="row l">
+    <div class="col">
+      <h2><span class="n">3</span>Best rank-$k$ fit (Eckart–Young)</h2>
+      <div class="eq box" data-color="blue">$$A_k = \sum_{i=1}^{k} \sigma_i u_i v_i^{\top}, \qquad \|A - A_k\|_2 = \sigma_{k+1}$$</div>
+      <p class="note">no rank-$k$ matrix is closer &nbsp;<span class="gray">(Frobenius: error² $= \sum_{i\gt k}\sigma_i^2$)</span></p>
+      <p class="note">ours: $A_1 = \begin{bmatrix}1.6 & 3.2\\ 0.8 & 1.6\end{bmatrix}$, error $= \sigma_2 = 1$</p>
+      <p class="chain small">fast σ decay <span class="to">→</span> few terms suffice <span class="to">→</span> PCA, low-rank weights, LoRA-style compression</p>
+    </div>
+    <div class="col">
+      <div class="fig" id="p4-rank1"></div>
+      <span class="cap note">$A_1$ squashes the ellipse onto its long axis; what's lost is $\sigma_2 u_2$</span>
+    </div>
+  </div>
+
+  <p class="chain"><span class="tag red">Failure:</span> $A^{-1} = V\Sigma^{-1}U^{\top}$ <span class="to">→</span> noise along $u_n$ is multiplied by $1/\sigma_n$ <span class="to">→</span> <span class="bad">tiny $\sigma_n$ blows up solutions</span> <span class="to">→</span> truncate or regularise</p>
+
+  <div class="row c2 bottom">
+    <div class="col quiz">
+      <h2><span class="n">?</span>Test your understanding</h2>
+      <ol>
+        <li>What are the σ's of $3A$, $A^{\top}$ and $A^{-1}$? Where do $u_i, v_i$ go?</li>
+        <li>Why is $e_1$, the eigenvector of $A$, not an axis of the ellipse? When do eigen- and singular vectors coincide?</li>
+        <li>Let $\sigma_2 \to 0$. What happens to the ellipse, the rank, $\kappa$, and GD on $f$?</li>
+        <li>From the circle → ellipse picture alone, rebuild $A = U\Sigma V^{\top}$. Which step needs $V$ orthogonal?</li>
+      </ol>
+    </div>
+    <div class="col remember">
+      <h2><span class="n">!</span>Remember</h2>
+      <ol>
+        <li>$A$ maps the unit sphere to an ellipsoid; $v_i$ land on its axes $\sigma_i u_i$.</li>
+        <li>$U\Sigma V^{\top}$ = rotate, stretch along axes, rotate; it exists for every matrix.</li>
+        <li>σ's are $A$'s honest sizes: $\|A\|_2 = \sigma_1$, rank $= \#\sigma \gt 0$, $\kappa = \sigma_1/\sigma_n$.</li>
+        <li>Truncating the sum gives the best rank-$k$ fit, error $\sigma_{k+1}$.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<script>
+Sketch.draw(() => {
+  const r5 = Math.sqrt(5);
+  const v1 = [1 / r5, 2 / r5], v2 = [-2 / r5, 1 / r5];   // right singular vectors
+  const u1 = [2 / r5, 1 / r5], u2 = [-1 / r5, 2 / r5];   // left singular vectors
+  const s1 = 4, s2 = 1, th = Math.atan2(1, 2);           // u1 angle = 26.57°
+  const add = (p, q) => [p[0] + q[0], p[1] + q[1]], sc = (k, p) => [k * p[0], k * p[1]];
+  const A = (p) => [2 * p[0] + 3 * p[1], 2 * p[1]];
+  const corner = (f, o, a, b, s) => f.path([add(o, sc(s, a)), add(o, add(sc(s, a), sc(s, b))), add(o, sc(s, b))],
+                                           { smooth: false, color: "gray", width: 1, rough: 0.3 });
+
+  // ---------- page 1: circle → ellipse ----------
+  {
+    const f = Sketch.fig("#p1-map", { w: 660, h: 258, x: [-1.9, 12.0], y: [-2.55, 2.55], pad: 14 });
+    const O = [0, 0], C = [7.3, 0];
+    // light axes
+    for (const c of [O, C]) {
+      const hw = c === O ? 1.5 : 4.0;
+      f.line([c[0] - hw, 0], [c[0] + hw, 0], { color: "faint", width: 1, rough: 0.3 });
+      f.line([c[0], -2.3], [c[0], 2.3], { color: "faint", width: 1, rough: 0.3 });
+    }
+    f.circle(O, 45.8, { color: "ink", width: 1.3 });
+    f.arrow(O, v1, { color: "blue", width: 1.8, label: "v_1", tex: true, size: 15, labelOffset: [14, -10] });
+    f.arrow(O, v2, { color: "blue", width: 1.8, label: "v_2", tex: true, size: 15, labelOffset: [-16, -4] });
+    corner(f, O, v1, v2, 0.16);
+    f.arrow(O, [1, 0], { color: "gray", dashed: true, width: 1.2, head: 6 });
+    f.tex([1, 0], "e_1", { color: "gray", size: 13, dx: 4, dy: 10 });
+    f.text([0, -1.25], "unit circle (inputs)", { anchor: "middle", color: "#4a4f57", size: 16, dy: 14 });
+
+    // the map
+    f.arrow([1.75, 0.55], [3.1, 0.55], { color: "ink", width: 1.5, curve: -10 });
+    f.matrix([2.42, 0.95], [["2", "3"], ["0", "2"]], { anchor: "middle", base: "bottom", size: 13 });
+    f.tex([2.42, 1.95], "A =", { anchor: "middle", base: "bottom", size: 14 });
+
+    f.ellipse(C, s1, s2, { angle: th, color: "ink", width: 1.3, rough: 0.35, single: true });
+    f.arrow(C, add(C, sc(s1, u1)), { color: "blue", width: 1.8, label: "\\sigma_1 u_1 = A v_1", tex: true, size: 15, labelOffset: [-40, -26] });
+    f.arrow(C, add(C, sc(s2, u2)), { color: "blue", width: 1.8, label: "\\sigma_2 u_2 = A v_2", tex: true, size: 15, labelOffset: [-52, -10] });
+    corner(f, C, u1, u2, 0.22);
+    f.arrow(C, add(C, A([1, 0])), { color: "gray", dashed: true, width: 1.2, head: 6 });
+    f.tex(add(C, [2, 0]), "Ae_1 = 2e_1", { color: "gray", size: 13, dx: 4, dy: 12 });
+    f.text([7.3, -2.05], "ellipse (outputs): semi-axes 4 and 1", { anchor: "middle", color: "#4a4f57", size: 16, dy: 12 });
+  }
+
+  // ---------- page 2: Vᵀ, Σ, U pipeline ----------
+  {
+    const f = Sketch.fig("#p2-pipe", { w: 680, h: 178, x: [-1.5, 25.7], y: [-3.4, 2.6], pad: 12 });
+    const cx = [0, 4.6, 12.1, 22.0];
+    const pxUnit = (680 - 24) / 27.2;
+    const xs = [[1, 0], [1 / r5, -2 / r5], [4 / r5, -2 / r5], [2, 0]];   // x = e1 through the stages
+    const vecs = [[v1, v2], [[1, 0], [0, 1]], [[s1, 0], [0, s2]], [sc(s1, u1), sc(s2, u2)]];
+    const labs = [["v_1", "v_2"], ["e_1", "e_2"], ["\\sigma_1 e_1", "\\sigma_2 e_2"], ["\\sigma_1 u_1", "\\sigma_2 u_2"]];
+    const lofs = [[[12, -6], [-12, -6]], [[10, 8], [-10, -6]], [[-10, -26], [0, -10]], [[-6, -14], [-18, -8]]];
+    const hw = [1.35, 1.35, 4.3, 3.8];
+    const caps = ["inputs x", "v’s now on the axes", "stretched ×4 and ×1", "turned onto the u’s: Ax"];
+    cx.forEach((c, k) => {
+      const O = [c, 0];
+      f.line([c - hw[k], 0], [c + hw[k], 0], { color: "faint", width: 1, rough: 0.3 });
+      f.line([c, -2.2], [c, 2.2], { color: "faint", width: 1, rough: 0.3 });
+      if (k < 2) f.circle(O, pxUnit, { color: "ink", width: 1.2 });
+      else f.ellipse(O, s1, s2, { angle: k === 3 ? th : 0, color: "ink", width: 1.2, rough: 0.35, single: true });
+      vecs[k].forEach((v, j) => f.arrow(O, add(O, v), { color: "blue", width: 1.6, head: 6,
+        label: labs[k][j], tex: true, size: 12, labelOffset: lofs[k][j] }));
+      f.point(add(O, xs[k]), { color: "gray", r: 2.8 });
+      f.text([c, -2.75], caps[k], { anchor: "middle", size: 14, color: "#4a4f57" });
+    });
+    f.tex([0, 0], "x", { color: "gray", size: 12, dx: 30, dy: 9 });
+    f.tex([22.0, 0], "Ax", { color: "gray", size: 12, dx: 52, dy: 10 });
+    const ops = [[1.6, 3.0, "V^{\\top}"], [6.15, 7.55, "\\Sigma"], [16.6, 18.0, "U"]];
+    for (const [a, b, t] of ops) {
+      f.arrow([a, 0], [b, 0], { color: "ink", width: 1.5, head: 7 });
+      f.tex([(a + b) / 2, 0], t, { anchor: "middle", base: "bottom", size: 16, dy: -6 });
+    }
+  }
+
+  // ---------- page 2: shapes ----------
+  {
+    const g = Sketch.fig("#p2-shapes", { w: 300, h: 150 });
+    const y0 = 22, m = 92, n = 52;
+    g.box(4, y0, n, m, "A", { color: "ink", size: 18, tex: true });
+    g.text([66, y0 + m / 2 + 6], "=", { anchor: "middle", size: 22 });
+    g.rect([80, y0], [80 + m, y0 + m], { color: "ink" });
+    g.rect([80, y0], [80 + n, y0 + m], { color: "blue", fill: "blue", gap: 6, rough: 0.6 });
+    g.tex([80 + m / 2 + 18, y0 + m / 2], "U", { anchor: "middle", size: 17 });
+    g.rect([182, y0], [182 + n, y0 + m], { color: "ink" });
+    g.line([186, y0 + 4], [182 + n - 4, y0 + n - 4], { color: "blue", width: 2 });
+    g.line([182, y0 + n], [182 + n, y0 + n], { color: "gray", dashed: true, width: 1 });
+    g.tex([182 + n / 2, y0 + n + (m - n) / 2], "0", { anchor: "middle", size: 14, color: "gray" });
+    g.tex([182 + n - 10, y0 + 18], "\\Sigma", { anchor: "middle", size: 13 });
+    g.rect([244, y0], [244 + n, y0 + n], { color: "ink" });
+    g.tex([244 + n / 2, y0 + n / 2], "V^{\\top}", { anchor: "middle", size: 15 });
+    const dims = [[4 + n / 2, "m\\times n"], [80 + m / 2, "m\\times m"], [182 + n / 2, "m\\times n"]];
+    for (const [x, t] of dims) g.tex([x, y0 + m + 4], t, { anchor: "middle", base: "top", size: 11, color: "gray" });
+    g.tex([244 + n / 2, y0 + n + 4], "n\\times n", { anchor: "middle", base: "top", size: 11, color: "gray" });
+    g.text([80 + n / 2, y0 - 6], "first n cols", { anchor: "middle", size: 13, color: "blue" });
+  }
+
+  // ---------- page 3: integer-grid check ----------
+  {
+    const f = Sketch.fig("#p3-grid", { w: 270, h: 150, x: [-2.6, 8.6], y: [-0.7, 4.6], pad: 10 });
+    for (let i = -2; i <= 8; i++) f.line([i, -0.15], [i, 0.15], { color: "faint", width: 1, rough: 0 });
+    for (let j = 1; j <= 4; j++) f.line([-0.15, j], [0.15, j], { color: "faint", width: 1, rough: 0 });
+    f.line([-2.5, 0], [8.5, 0], { color: "faint", width: 1, rough: 0.3 });
+    f.line([0, -0.6], [0, 4.5], { color: "faint", width: 1, rough: 0.3 });
+    f.arrow([0, 0], [1, 2], { color: "gray", width: 1.4, head: 6, dashed: true, label: "(1,2)", size: 14, labelOffset: [14, 6] });
+    f.arrow([0, 0], [-2, 1], { color: "gray", width: 1.4, head: 6, dashed: true, label: "(-2,1)", size: 14, labelOffset: [-16, 14] });
+    f.arrow([0, 0], [8, 4], { color: "blue", width: 1.8, head: 7, label: "(8,4) = 4·(2,1)", size: 14, labelOffset: [-60, -14] });
+    f.arrow([0, 0], [-1, 2], { color: "blue", width: 1.8, head: 7, label: "(-1,2)", size: 14, labelOffset: [-24, 0] });
+  }
+
+  // ---------- page 4: contours + GD ----------
+  {
+    const f = Sketch.fig("#p4-gd", { w: 290, h: 250, x: [-2.4, 2.4], y: [-2.05, 2.05], pad: 12 });
+    f.axes({ x: "x_1", y: "x_2" });
+    const F = (x, y) => 0.5 * ((2 * x + 3 * y) ** 2 + (2 * y) ** 2);
+    f.contours(F, [0.125, 0.5, 1.125, 2.0, 3.125]);
+    // GD with η = 2/17 from x0 = 0.4 v1 + 1.9 v2
+    let x = add(sc(0.4, v1), sc(-1.9, v2)); const pts = [x];
+    for (let k = 0; k < 6; k++) {
+      const g = [4 * x[0] + 6 * x[1], 6 * x[0] + 13 * x[1]];
+      x = [x[0] - 2 / 17 * g[0], x[1] - 2 / 17 * g[1]]; pts.push(x);
+    }
+    f.path(pts, { smooth: false, color: "red", width: 1.4 });
+    pts.forEach((p, i) => f.point(p, { color: "red", r: i ? 2.2 : 3 }));
+    f.tex(pts[0], "x_0", { color: "red", size: 12, dx: 6, dy: 10, anchor: "start" });
+    f.point([0, 0], { color: "green", r: 3.2 });
+    f.arrow([0, 0], sc(1.55, v2), { color: "blue", width: 1.6, head: 6 });
+    f.tex([-2.3, 1.62], "v_2\\ (\\sigma_2 = 1)", { color: "blue", size: 12 });
+    f.arrow([0, 0], sc(0.75, v1), { color: "blue", width: 1.6, head: 6 });
+    f.tex([0.5, 1.05], "v_1\\ (\\sigma_1 = 4)", { color: "blue", size: 12 });
+  }
+
+  // ---------- page 4: rank-1 truncation ----------
+  {
+    const f = Sketch.fig("#p4-rank1", { w: 270, h: 170, x: [-4.3, 4.3], y: [-2.5, 2.5], pad: 10 });
+    f.ellipse([0, 0], s1, s2, { angle: th, color: "gray", dashed: true, width: 1.1 });
+    f.line(sc(-s1, u1), sc(s1, u1), { color: "green", width: 2.6 });
+    f.tex(sc(s1, u1), "A_1:\\ \\text{segment}", { color: "green", size: 12, dx: -4, dy: -14, anchor: "end" });
+    f.arrow([0, 0], sc(s2, u2), { color: "red", width: 1.6, head: 6, dashed: true, label: "\\sigma_2 u_2\\ \\text{lost}", tex: true, size: 12, labelOffset: [-22, -8] });
+    f.text([0, -2.1], "A (dashed)", { anchor: "middle", size: 14, color: "gray" });
+  }
+});
+</script>
+</body>
+</html>
